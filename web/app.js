@@ -508,6 +508,18 @@ function bindEvents(){
   byId('dbQuery').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); searchLocalDb(); } });
 }
 
+function renderAllSolutions(){
+  const box = byId('allSolutions');
+  if(!box || typeof DiagEngine === 'undefined' || !DiagEngine.listRepairPlaybooks) return;
+  const plans = DiagEngine.listRepairPlaybooks();
+  box.innerHTML = plans.map(plan => `
+    <details class="playbook">
+      <summary>${esc(plan.labels.join(', '))}</summary>
+      <ol class="checks diy-list">${(plan.diySteps || []).map(step => `<li>${esc(step)}</li>`).join('')}</ol>
+    </details>
+  `).join('');
+}
+
 async function init(){
   fillYears();
   renderSymptoms();
@@ -525,6 +537,7 @@ async function init(){
     return;
   }
   loadStats();
+  renderAllSolutions();
   document.querySelectorAll('details.extra').forEach((el) => {
     el.open = window.innerWidth >= 800;
   });

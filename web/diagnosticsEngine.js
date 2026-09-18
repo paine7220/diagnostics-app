@@ -477,7 +477,30 @@ const DiagEngine = (() => {
     };
   }
 
-  return { APP_VERSION, computeStats, searchDtc, lookupCodes, buildAnalysis };
+  function listRepairPlaybooks() {
+    const seen = new Map();
+    const add = (label, steps) => {
+      const list = steps || [];
+      if (!list.length) return;
+      const key = list.join('\n');
+      if (seen.has(key)) {
+        const row = seen.get(key);
+        if (!row.labels.includes(label)) row.labels.push(label);
+        return;
+      }
+      seen.set(key, { labels: [label], diySteps: list });
+    };
+    Object.entries(DETAILED_GUIDANCE).forEach(([code, guide]) => {
+      if (/^P030[1-9]$/.test(code) || /^P031[0-2]$/.test(code)) return;
+      add(code + ' — ' + (guide.title || code), guide.diySteps);
+    });
+    Object.entries(SUBSYSTEM_DIY).forEach(([key, steps]) => {
+      add(SUBSYSTEM_LABELS[key] || key, steps);
+    });
+    return Array.from(seen.values());
+  }
+
+  return { APP_VERSION, computeStats, searchDtc, lookupCodes, buildAnalysis, listRepairPlaybooks, diyStepsFor };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = DiagEngine;

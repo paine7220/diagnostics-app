@@ -118,6 +118,18 @@ check('DiagEngine lookup and analysis for P0300', () => {
   assert.ok(analysis.warnings.some((line) => /misfire/i.test(line)));
 });
 
+check('every bundled DTC has DIY steps', () => {
+  const sandbox = { module: { exports: {} }, window: {} };
+  vm.runInNewContext(dtcJs + '\n' + engineSrc + '\nmodule.exports = DiagEngine;', sandbox);
+  const engine = sandbox.module.exports;
+  const db = sandbox.window.DTC_DB_DATA;
+  const found = engine.lookupCodes(db, db.map((row) => row.code));
+  const missing = found.filter((row) => !row.detailed || !row.detailed.diySteps || !row.detailed.diySteps.length).map((row) => row.code);
+  assert.strictEqual(found.length, db.length);
+  assert.strictEqual(missing.length, 0, 'missing DIY for ' + missing.slice(0, 10).join(','));
+  assert.ok(engine.listRepairPlaybooks().length >= 1);
+});
+
 check('app.js talks to DiagEngine and DTC_DB_DATA', () => {
   assert.match(appSrc, /window\.DTC_DB_DATA/);
   assert.match(appSrc, /DiagEngine\.lookupCodes/);
