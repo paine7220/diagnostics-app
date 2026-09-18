@@ -1,0 +1,47 @@
+{
+  "name": "auto-truck-diagnostics-for-dummies",
+  "version": "1.2.0",
+  "description": "Offline-first Windows vehicle diagnostic assistant",
+  "main": "main.js",
+  "author": "Michael Paine",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis portable",
+    "dist:win:unsigned": "electron-builder --win nsis portable --config.win.signAndEditExecutable=false"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.michaelpaine.autotruckdiagnosticsfordummies",
+    "productName": "Auto Truck Diagnostics for Dummies",
+    "asar": true,
+    "files": ["app/**/*", "main.js", "preload.js", "package.json", "build/icon.png"],
+    "directories": {"output": "dist", "buildResources": "build"},
+    "win": {
+      "icon": "build/icon.png",
+      "target": ["nsis", "portable"],
+      "signAndEditExecutable": true,
+      "azureSignOptions": {
+        "publisherName": "CN=Michael Paine, O=Michael Paine, L=Superior, S=wi, C=US",
+        "endpoint": "https://eus.codesigning.azure.net/",
+        "codeSigningAccountName": "ravin-ai-signing",
+        "certificateProfileName": "ravin-ai-public"
+      }
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Auto Truck Diagnostics for Dummies",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Auto_Truck_Diagnostics_for_Dummies_Setup_${version}_${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Auto_Truck_Diagnostics_for_Dummies_Portable_${version}_${arch}.${ext}"
+    }
+  }
+}

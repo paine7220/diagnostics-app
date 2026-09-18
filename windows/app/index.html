@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'">
+  <title>Auto/Truck Diagnostics for Dummies</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <button class="warn" id="btnRunDiagnosisTop">Run Full Diagnosis</button>
+    <button id="btnLookupTop">Quick Lookup</button>
+    <button class="good" id="btnSaveCaseTop">Save Case</button>
+    <button class="secondary" id="btnExportTop">Export Report</button>
+    <a class="button ghost" href="./docs/privacy.html">Privacy</a>
+    <a class="button ghost" href="./docs/disclaimer.html">Disclaimer</a>
+  </div>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Auto/Truck Diagnostics for Dummies <span class="ver" id="appVersion">v1.2.0</span></h1>
+      <div class="sub">A merged DTC database, real local diagnostic workflow, case storage, and media capture &mdash; runs fully offline on Windows and iPhone.</div>
+      <div class="notice">What this build honestly does: it gives you a real diagnostic workflow with local code lookup, weighted analysis, media-assisted clues, exportable reports, and privacy/disclaimer pages, all running on-device. What it does not do: magically pull live ECU data without compatible hardware.</div>
+      <div class="stats" id="dbStats"></div>
+      <div class="acceptance"><input type="checkbox" id="acceptLegal"><div><strong>Required before diagnosis:</strong> I understand this is an assistant, not a guaranteed repair verdict, and media cues are only supporting evidence.</div></div>
+    </div>
+
+    <div class="grid g2 mt-14">
+      <section class="card">
+        <h2>1) Vehicle</h2>
+        <div class="grid g3">
+          <div><label for="year">Year</label><select id="year"></select></div>
+          <div><label for="make">Make</label><input id="make" placeholder="Chevy, Ford, Toyota, Harley"></div>
+          <div><label for="model">Model</label><input id="model" placeholder="Sierra, Ram, Explorer"></div>
+          <div><label for="engine">Engine</label><input id="engine" placeholder="5.3L V8"></div>
+          <div><label for="mileage">Mileage</label><input id="mileage" inputmode="numeric" placeholder="286583"></div>
+          <div><label for="trans">Transmission</label><select id="trans"><option value="">Select</option><option>Automatic</option><option>Manual</option><option>CVT</option><option>DCT</option><option>Unknown</option></select></div>
+          <div><label for="fuel">Fuel</label><select id="fuel"><option value="">Select</option><option>Gasoline</option><option>Diesel</option><option>Hybrid</option><option>Electric</option><option>Flex Fuel</option><option>Other</option></select></div>
+          <div><label for="nickname">Nickname</label><input id="nickname" placeholder="Work truck"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>2) Full DTC Database Lookup</h2>
+        <label for="codes">Paste one or more codes</label>
+        <textarea id="codes" placeholder="P0300
+P0171
+U0100"></textarea>
+        <div class="row">
+          <button id="btnLookup">Quick Lookup</button>
+          <button class="secondary" id="btnSearchDtc">Search Database</button>
+          <button class="secondary" id="btnClearCodes">Clear Codes</button>
+        </div>
+        <label for="dbQuery">Search term or code</label>
+        <input id="dbQuery" placeholder="P0128 or thermostat">
+        <div id="codeResults" class="cards mt-10"></div>
+      </section>
+
+      <section class="card">
+        <h2>3) Symptoms</h2>
+        <div class="symptoms" id="symptoms"></div>
+        <label for="notes">Notes</label>
+        <textarea id="notes" placeholder="Cranks long cold, fuel smell, stalls warm, fan not kicking on, battery light on."></textarea>
+      </section>
+
+      <section class="card">
+        <h2>4) Media Diagnostics</h2>
+        <div class="grid g2">
+          <div>
+            <label>Audio</label>
+            <div class="row"><button id="btnAudioRecord">Start Audio Recording</button><button class="secondary" id="btnAudioUpload">Upload Audio</button></div>
+            <input type="file" id="audioFile" accept="audio/*" hidden>
+            <audio id="audioPreview" controls class="full-w mt-8"></audio>
+            <div class="small" id="audioSummary">No audio analyzed yet.</div>
+          </div>
+          <div>
+            <label>Video / Camera</label>
+            <div class="row"><button id="btnStartCamera">Start Camera</button><button class="secondary" id="btnVideoUpload">Upload Video</button></div>
+            <input type="file" id="videoFile" accept="video/*" hidden>
+            <div class="row mt-8"><button class="secondary" id="btnCaptureFrame">Capture Frame</button><button class="secondary" id="btnStopCamera">Stop Camera</button></div>
+            <video id="videoPreview" playsinline muted controls></video>
+            <canvas id="frameCanvas" hidden></canvas>
+            <img id="frameImage" hidden alt="Captured frame">
+            <div class="small" id="imageSummary">No frame/image analyzed yet.</div>
+          </div>
+        </div>
+        <label>Photo</label>
+        <div class="row"><button class="secondary" id="btnPhotoUpload">Upload Photo</button></div>
+        <input type="file" id="photoFile" accept="image/*" hidden>
+        <img id="photoPreview" hidden alt="Photo evidence" class="mt-8">
+      </section>
+
+      <section class="card">
+        <h2>5) Fluid Assistant</h2>
+        <div class="grid g3">
+          <div><label for="fluidType">Fluid type</label><select id="fluidType"><option value="">Select</option><option>Engine oil</option><option>Transmission fluid</option><option>Coolant</option><option>Brake fluid</option><option>Power steering</option><option>Differential oil</option></select></div>
+          <div><label for="fluidLevel">Observed level</label><select id="fluidLevel"><option value="">Select</option><option>Below stick / dry</option><option>At or near add mark</option><option>Halfway between add and full</option><option>At full mark</option><option>Above full mark</option></select></div>
+          <div><label for="fluidColor">Fluid color</label><select id="fluidColor"><option value="">Select</option><option>Amber / honey</option><option>Dark brown</option><option>Black</option><option>Pink / red</option><option>Green</option><option>Orange</option><option>Milky</option><option>Metallic glitter</option></select></div>
+          <div><label for="fluidSmell">Smell</label><select id="fluidSmell"><option value="">Select</option><option>Normal</option><option>Burnt</option><option>Fuel smell</option><option>Sweet coolant smell</option></select></div>
+          <div><label for="fluidCapacity">Capacity known</label><input id="fluidCapacity" placeholder="6 quarts"></div>
+          <div><label for="fluidNotes">Notes</label><input id="fluidNotes" placeholder="Foamy, metallic, watery"></div>
+        </div>
+        <div class="out mt-10" id="fluidOut">Fluid guidance will show here.</div>
+      </section>
+
+      <section class="card">
+        <h2>6) Results</h2>
+        <div class="row">
+          <button class="warn" id="btnRunDiagnosis">Run Full Diagnosis</button>
+          <button class="secondary" id="btnSaveCase">Save Case</button>
+          <button class="secondary" id="btnLoadCase">Load Last Case</button>
+          <button class="secondary" id="btnClearCase">Clear Saved Case</button>
+          <button class="secondary" id="btnExport">Export Report</button>
+        </div>
+        <div id="results" class="out rich mt-10">Run a diagnosis to see ranked causes, first checks, likely parts, code cards, and warnings.</div>
+      </section>
+
+      <section class="card">
+        <h2>7) Legal &amp; Fees</h2>
+        <div class="row">
+          <a class="button ghost" href="./docs/privacy.html">Privacy Policy</a>
+          <a class="button ghost" href="./docs/disclaimer.html">Disclaimer</a>
+          <a class="button ghost" href="./docs/pricing.html">Fees / Pricing</a>
+        </div>
+        <div class="small mt-10">This build runs entirely on-device: local DTC database, exportable case workflow, no server required. CDI Genius is not included.</div>
+      </section>
+    </div>
+
+    <div class="footer">Auto/Truck Diagnostics for Dummies <span id="footerVersion">v1.2.0</span> &mdash; real local workflow, real exported reports, no fake buttons.</div>
+  </div>
+  <script src="./data/dtc-db.js"></script>
+  <script src="./diagnosticsEngine.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

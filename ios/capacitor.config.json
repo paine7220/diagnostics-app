@@ -1,0 +1,11 @@
+{
+  "appId": "com.michaelpaine.autotruckdiagnosticsfordummies",
+  "appName": "Auto/Truck Diagnostics for Dummies",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic"
+  }
+}
