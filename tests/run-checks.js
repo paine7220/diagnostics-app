@@ -36,7 +36,7 @@ check('index.html loads real script files', () => {
 check('button ids used by app.js exist in index.html', () => {
   const ids = [
     'btnRunDiagnosisTop', 'btnLookupTop', 'btnRebuildTop', 'btnSaveCaseTop', 'btnExportTop',
-    'btnLookup', 'btnSearchDtc', 'btnClearCodes', 'btnRunDiagnosis',
+    'btnLookup', 'btnSearchDtc', 'btnClearCodes', 'btnRunDiagnosis', 'btnRebuildDiagnosis',
     'btnSaveCase', 'btnLoadCase', 'btnClearCase', 'btnExport',
     'btnAudioRecord', 'btnAudioUpload', 'btnStartCamera', 'btnVideoUpload',
     'btnCaptureFrame', 'btnStopCamera', 'btnPhotoUpload', 'acceptLegal',

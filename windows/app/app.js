@@ -180,6 +180,7 @@ function clearCase(){
   ['make','model','engine','mileage','nickname','codes','notes','dbQuery','fluidCapacity','fluidNotes'].forEach(id => { if(byId(id)) byId(id).value = ''; });
   ['year','trans','fuel','fluidType','fluidLevel','fluidColor','fluidSmell'].forEach(id => { if(byId(id)) byId(id).value = ''; });
   symptoms.forEach((_, i) => { if(byId(`sym_${i}`)) byId(`sym_${i}`).checked = false; });
+  ['flagRodKnock','flagLowCompression','flagBurnsOil','flagMetalInOil','flagNeedRebuild'].forEach(id => { if(byId(id)) byId(id).checked = false; });
   state.lastAnalysis = null;
   state.lastAnalysisText = '';
   state.audioSummary = null;
@@ -198,7 +199,7 @@ function currentCase(){
     appVersion: APP_VERSION,
     vehicle: vehicleData(),
     dtcs: parseCodes(),
-    symptoms: checkedSymptoms(),
+    symptoms: Array.from(new Set(checkedSymptoms().concat(rebuildFlagSymptoms()))),
     notes: value('notes'),
     fluid: {
       type: value('fluidType'), level: value('fluidLevel'), color: value('fluidColor'), smell: value('fluidSmell'), capacity: value('fluidCapacity'), notes: value('fluidNotes')
@@ -419,13 +420,49 @@ async function toggleAudioRecord(){
   }
 }
 
+function rebuildFlagSymptoms(){
+  const extra = [];
+  if(byId('flagRodKnock') && byId('flagRodKnock').checked) extra.push('Rod knock');
+  if(byId('flagLowCompression') && byId('flagLowCompression').checked) extra.push('Low compression');
+  if(byId('flagBurnsOil') && byId('flagBurnsOil').checked) extra.push('Burns oil');
+  if(byId('flagNeedRebuild') && byId('flagNeedRebuild').checked) extra.push('Needs engine rebuild');
+  if(byId('flagMetalInOil') && byId('flagMetalInOil').checked) extra.push('Needs engine rebuild');
+  return extra;
+}
+
+function markSymptom(name, on){
+  const i = symptoms.indexOf(name);
+  const el = i >= 0 ? byId('sym_' + i) : null;
+  if(el) el.checked = !!on;
+}
+
+function startRebuildDiagnosis(){
+  if(!byId('flagRodKnock').checked && !byId('flagLowCompression').checked && !byId('flagBurnsOil').checked && !byId('flagMetalInOil').checked && !byId('flagNeedRebuild').checked){
+    byId('flagNeedRebuild').checked = true;
+  }
+  markSymptom('Rod knock', byId('flagRodKnock').checked);
+  markSymptom('Low compression', byId('flagLowCompression').checked);
+  markSymptom('Burns oil', byId('flagBurnsOil').checked);
+  markSymptom('Needs engine rebuild', byId('flagNeedRebuild').checked || byId('flagMetalInOil').checked);
+  if(byId('flagMetalInOil').checked){
+    if(byId('fluidType')) byId('fluidType').value = 'Engine oil';
+    if(byId('fluidColor')) byId('fluidColor').value = 'Metallic glitter';
+    fluidData();
+  }
+  const notes = byId('notes');
+  if(notes && byId('flagMetalInOil').checked && !/metal in oil/i.test(notes.value)){
+    notes.value = (notes.value ? notes.value + ' ' : '') + 'metal in oil';
+  }
+  runDiagnosis();
+}
+
 async function runDiagnosis(){
   if(!requireLegalAcceptance()) return;
   fluidData();
   const payload = {
     vehicle: vehicleData(),
     dtcs: parseCodes(),
-    symptoms: checkedSymptoms(),
+    symptoms: Array.from(new Set(checkedSymptoms().concat(rebuildFlagSymptoms()))),
     notes: value('notes'),
     fluid: {
       type: value('fluidType'), level: value('fluidLevel'), color: value('fluidColor'), smell: value('fluidSmell'), capacity: value('fluidCapacity'), notes: value('fluidNotes')
@@ -488,6 +525,8 @@ function bindEvents(){
   byId('btnRunDiagnosisTop').onclick = runDiagnosis;
   const rebuildBtn = byId('btnRebuildTop');
   if(rebuildBtn) rebuildBtn.onclick = () => { renderRebuildGuide(); showEl('rebuildCard'); };
+  const rebuildDiag = byId('btnRebuildDiagnosis');
+  if(rebuildDiag) rebuildDiag.onclick = startRebuildDiagnosis;
   byId('btnSaveCase').onclick = saveCase;
   byId('btnSaveCaseTop').onclick = saveCase;
   byId('btnLoadCase').onclick = loadCase;

@@ -49,6 +49,16 @@
       <section class="card" id="rebuildCard">
         <h2>Engine rebuild</h2>
         <div class="small" id="rebuildSummary">Prove it is a bottom-end or head job, then pull, measure, assemble, and break in. Torque comes from your engine’s service data.</div>
+        <div class="symptoms mt-10" id="rebuildFlags">
+          <label><input type="checkbox" id="flagRodKnock"> <span>Rod knock</span></label>
+          <label><input type="checkbox" id="flagLowCompression"> <span>Low compression</span></label>
+          <label><input type="checkbox" id="flagBurnsOil"> <span>Burns oil</span></label>
+          <label><input type="checkbox" id="flagMetalInOil"> <span>Metal in the oil</span></label>
+          <label><input type="checkbox" id="flagNeedRebuild"> <span>I already know it needs a rebuild</span></label>
+        </div>
+        <div class="row mt-10">
+          <button class="warn" id="btnRebuildDiagnosis">Start rebuild diagnosis</button>
+        </div>
         <div id="rebuildStages" class="mt-10"></div>
       </section>
 
