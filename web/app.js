@@ -143,6 +143,10 @@ function searchLocalDb(){
     renderRebuildGuide();
     showEl('rebuildCard');
   }
+  if(/starter|alternator|valve cover|stereo|amp|subwoofer|exhaust|headlight|tail light|hub|flat|spark plug|oil|brake|tranny|trans fluid|windshield|injector|control arm|axle|rotor|pad/i.test(q)){
+    renderCommonJobs(q);
+    showEl('jobsCard');
+  }
   const results = DiagEngine.searchDtc(state.dtcDb, q);
   renderLookupCards(results);
 }
@@ -234,6 +238,14 @@ function analysisToText(analysis){
     analysis.rebuildGuide.stages.forEach((stage) => {
       lines.push(stage.title);
       (stage.steps || []).forEach((x, i) => lines.push(`  ${i+1}. ${x}`));
+    });
+  }
+  if(analysis.relatedJobs && analysis.relatedJobs.length){
+    lines.push('');
+    lines.push('Related how-to jobs');
+    analysis.relatedJobs.forEach((job) => {
+      lines.push(job.title);
+      (job.steps || []).forEach((x, i) => lines.push(`  ${i+1}. ${x}`));
     });
   }
   lines.push('');
@@ -506,6 +518,7 @@ function renderAnalysis(analysis){
     </div>
     <div class="result-block"><h3>DIY repair steps${analysis.diyTitle ? ' — ' + esc(analysis.diyTitle) : ''}</h3><ol class="checks diy-list">${list(analysis.diySteps)}</ol></div>
     ${analysis.rebuildGuide ? `<div class="result-block"><h3>Engine rebuild</h3><div class="small">${esc(analysis.rebuildGuide.summary || '')}</div><p class="small mt-8"><a href="#rebuildCard">Open the full rebuild stages</a></p></div>` : ''}
+    ${analysis.relatedJobs && analysis.relatedJobs.length ? `<div class="result-block"><h3>Related how-to jobs</h3>${analysis.relatedJobs.map((job) => `<p class="small mt-8"><a href="#job-${esc(job.id)}" data-job="${esc(job.id)}">${esc(job.title)}</a></p>`).join('')}</div>` : ''}
     <div class="result-block"><h3>Top ranked causes</h3>${hypos}</div>
     <div class="result-block"><h3>First checks</h3><ol class="checks">${list(analysis.firstChecks)}</ol></div>
     <div class="result-block"><h3>Likely parts / paths</h3><ol class="checks">${list(analysis.likelyParts)}</ol></div>
@@ -525,6 +538,8 @@ function bindEvents(){
   byId('btnRunDiagnosisTop').onclick = runDiagnosis;
   const rebuildBtn = byId('btnRebuildTop');
   if(rebuildBtn) rebuildBtn.onclick = () => { renderRebuildGuide(); showEl('rebuildCard'); };
+  const jobsBtn = byId('btnJobsTop');
+  if(jobsBtn) jobsBtn.onclick = () => { renderCommonJobs(); showEl('jobsCard'); };
   const rebuildDiag = byId('btnRebuildDiagnosis');
   if(rebuildDiag) rebuildDiag.onclick = startRebuildDiagnosis;
   byId('btnSaveCase').onclick = saveCase;
@@ -565,6 +580,49 @@ function bindEvents(){
     solutionQuery.addEventListener('input', () => renderAllSolutions(solutionQuery.value));
     solutionQuery.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); renderAllSolutions(solutionQuery.value); } });
   }
+  const jobQuery = byId('jobQuery');
+  if(jobQuery){
+    jobQuery.addEventListener('input', () => renderCommonJobs(jobQuery.value));
+    jobQuery.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); renderCommonJobs(jobQuery.value); } });
+  }
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('[data-job]');
+    if(!a) return;
+    e.preventDefault();
+    openJob(a.getAttribute('data-job'));
+  });
+}
+
+function openJob(id){
+  if(byId('jobQuery')) byId('jobQuery').value = '';
+  renderCommonJobs('');
+  showEl('jobsCard');
+  const node = byId('job-' + id);
+  if(node){
+    node.open = true;
+    node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function renderCommonJobs(filter){
+  const box = byId('commonJobs');
+  if(!box || typeof DiagEngine === 'undefined' || !DiagEngine.listCommonJobs) return;
+  const q = String(filter != null ? filter : (byId('jobQuery') && byId('jobQuery').value) || '').trim().toLowerCase();
+  const jobs = DiagEngine.listCommonJobs().filter((job) => {
+    if(!q) return true;
+    const hay = (job.title + ' ' + (job.keywords || []).join(' ') + ' ' + (job.steps || []).join(' ')).toLowerCase();
+    return hay.includes(q);
+  });
+  if(!jobs.length){
+    box.innerHTML = '<div class="small">No job matches that search. Try starter, brakes, oil, or axle.</div>';
+    return;
+  }
+  box.innerHTML = jobs.map((job) => `
+    <details class="playbook" id="job-${esc(job.id)}"${q ? ' open' : ''}>
+      <summary>${esc(job.title)}</summary>
+      <ol class="checks diy-list">${(job.steps || []).map((step) => `<li>${esc(step)}</li>`).join('')}</ol>
+    </details>
+  `).join('');
 }
 
 function renderRebuildGuide(){
@@ -622,6 +680,7 @@ async function init(){
   loadStats();
   renderAllSolutions();
   renderRebuildGuide();
+  renderCommonJobs();
   document.querySelectorAll('details.extra').forEach((el) => {
     el.open = window.innerWidth >= 800;
   });

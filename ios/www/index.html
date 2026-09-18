@@ -17,13 +17,14 @@
     <button class="warn" id="btnRunDiagnosisTop">Run Diagnosis</button>
     <button id="btnLookupTop">Quick Lookup</button>
     <button id="btnRebuildTop">Engine Rebuild</button>
+    <button id="btnJobsTop">How-to Jobs</button>
     <button class="good" id="btnSaveCaseTop">Save</button>
     <button class="secondary" id="btnExportTop">Export</button>
   </div>
   <div class="wrap">
     <div class="hero">
       <h1>Auto/Truck Diagnostics for Dummies <span class="ver" id="appVersion">v1.2.0</span></h1>
-      <div class="sub">Type a trouble code, or open Engine Rebuild for pull / machine / assemble / break-in steps.</div>
+      <div class="sub">Type a trouble code, open Engine Rebuild, or How-to Jobs for starters, brakes, oil, axles, and the rest.</div>
       <div class="stats" id="dbStats"></div>
       <div class="acceptance"><input type="checkbox" id="acceptLegal"><div>I know this is an assistant, not a guaranteed repair.</div></div>
     </div>
@@ -44,6 +45,14 @@
         <label for="dbQuery">Or search a word</label>
         <input id="dbQuery" placeholder="thermostat">
         <div id="codeResults" class="cards mt-10"></div>
+      </section>
+
+      <section class="card" id="jobsCard">
+        <h2>How-to jobs</h2>
+        <div class="small">Driveway steps for common repairs. Torque, fluid type, and bolt stretch still come from this vehicle’s service data.</div>
+        <label for="jobQuery">Find a job</label>
+        <input id="jobQuery" placeholder="starter, brakes, oil, axle, stereo">
+        <div id="commonJobs" class="mt-10"></div>
       </section>
 
       <section class="card" id="rebuildCard">
@@ -77,7 +86,7 @@
         <h2>All repair solutions in this app</h2>
         <div class="small">Code-specific driveway steps for common OBD-II problems, plus a fallback playbook for every other bundled code. These are not factory shop manuals.</div>
         <label for="solutionQuery">Find a repair</label>
-        <input id="solutionQuery" placeholder="P0442, MAF, converter">
+        <input id="solutionQuery" placeholder="P0442, starter, brakes, rebuild">
         <div id="allSolutions" class="mt-10"></div>
       </section>
 

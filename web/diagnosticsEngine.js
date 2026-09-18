@@ -670,6 +670,293 @@ const DiagEngine = (() => {
     return ENGINE_REBUILD;
   }
 
+  const COMMON_JOBS = [
+    {
+      id: 'starter',
+      title: 'Change a starter',
+      keywords: ['starter', 'no crank', 'click', 'solenoid'],
+      steps: [
+        'Confirm it is the starter: headlights stay bright, one click or a grind, in Park/Neutral, charged battery, clean terminals. A dead battery is not a starter.',
+        'Disconnect the negative battery cable first. The big B+ cable on the starter is hot even with the key off.',
+        'On many trucks the starter is two bolts from underneath. Support it — it is heavy and will drop. On some 4WD and transverse engines you move a motor mount or splash shield first. Take a picture of the wiring: big battery cable, smaller solenoid trigger wire, sometimes a third “I” terminal.',
+        'Unbolt, compare the new unit clocking and the nose (gear) length to the old one. The wrong starter will chew the flexplate.',
+        'Install, snug the bolts (use the spec for this engine — do not gorilla the aluminum bellhousing), reconnect the cables, negative battery last.',
+        'Hold the brake, try Park and Neutral. If it spins but will not engage, the nose/gear is wrong or the flexplate ring is missing teeth. If it still clicks, voltage-drop the positive cable and the engine ground before you buy a second starter.'
+      ]
+    },
+    {
+      id: 'alternator',
+      title: 'Change an alternator',
+      keywords: ['alternator', 'battery light', 'charging', 'belt'],
+      steps: [
+        'Prove charging is dead: engine running, a cheap meter on the battery should read about 13.5–14.7V. If it stays near 12V with a known-good battery, the alternator (or its fuse/fusible link) is next. Dim headlights that brighten when you rev is the same story.',
+        'Disconnect negative battery. Photograph the belt routing. Slack the tensioner (square hole or bolt) and slip the belt off.',
+        'Unplug the regulator connector. If it is melted, buy a pigtail — a new alternator will not fix a burned plug. Remove the output (B+) nut; that stud is still hot if you skipped the battery cable.',
+        'Usually 2–3 bolts. Support the unit. Compare pulley alignment and clocking on the new one. A wrong clock makes the belt walk off.',
+        'Install, belt on, tensioner eased back. Reconnect, negative last. Start it and re-check voltage. If it still sits at 12V, check the fusible link / mega fuse at the battery or under-hood box before condemning the new unit.',
+        'Stop if the new plug smells hot. Repair the harness. A one-wire “hot rod” conversion is not the fix on a PCM-controlled truck alternator.'
+      ]
+    },
+    {
+      id: 'valve_cover',
+      title: 'Replace a valve cover gasket',
+      keywords: ['valve cover', 'gasket', 'oil leak', 'valve cover gasket'],
+      steps: [
+        'Oil at the spark-plug wells, the exhaust, or the valley is often the valve cover, not a rear main. Clean it, idle, and watch where it weeps so you fix the right cover.',
+        'Disconnect negative battery if coils/injectors sit on the cover. Number the coils and harness clips. Pull the coils, PCV hose, and any brackets. Do not pry on plastic covers with a screwdriver in the gasket groove — you crack them.',
+        'Unbolt in a criss-cross, lift straight. Clean the head rail and the cover with a plastic scraper and brake cleaner. No deep gouges. Peel every scrap of old rubber.',
+        'New gasket in the groove, a dab of the RTV the gasket sheet calls for only at the half-moons / timing-cover joints if that engine uses it. Do not RTV the whole rail “for luck.”',
+        'Bolts snug in a criss-cross to the spec for this cover — plastic covers strip if you treat them like lug nuts. Reinstall coils with new boots if they were oil-soaked. Plugs that sat in oil get replaced; they will misfire.',
+        'Idle and recheck. A leak that moves to the rear of the head after this job is a different gasket (intake or rear main). Do not keep tightening cover bolts.'
+      ]
+    },
+    {
+      id: 'stereo',
+      title: 'Rewire a stereo / head unit',
+      keywords: ['stereo', 'radio', 'head unit', 'aftermarket radio', 'rewire stereo'],
+      steps: [
+        'Disconnect the negative battery. Airbag (yellow) connectors behind the dash are not radio wires — do not probe them with a test light.',
+        'Use a vehicle-specific dash kit and wiring harness adapter. Do not cut the factory radio plug if you can avoid it; the adapter unplugs later.',
+        'Match functions, not colors: yellow = constant 12V memory, red = switched/ACC, black = ground, orange/orange-white = illumination, blue = power antenna/amp turn-on. Factory color codes are not universal.',
+        'Speaker wires: + and − per corner. Reversing one speaker makes the bass cancel. Do not tap speaker wires with a test light while the airbag is armed.',
+        'On many late trucks the factory radio is the gateway (CAN/MOST). A “simple” aftermarket unit can kill steering-wheel buttons, OnStar, or chimes unless you add the right interface. If the dash has a digital cluster that talks to the radio, buy the interface first.',
+        'Reconnect the battery, set the clock, check each speaker at low volume, headlights on for dimming, and that the factory amp (if any) turns on. A fuse that pops is a pinched wire — find it, do not go up a fuse size.'
+      ]
+    },
+    {
+      id: 'amp_sub',
+      title: 'Add an amp and subwoofer',
+      keywords: ['amp', 'amplifier', 'subwoofer', 'sub', 'bass'],
+      steps: [
+        'Plan power first. Big bass needs a healthy battery and alternator. An amp that starves the truck will dim lights and set voltage codes.',
+        'Run a power cable from the battery through a grommet (not through a raw sheet-metal hole). Fuse it within about 18 inches of the battery with the fuse the amp maker lists. No fuse at the battery is a fire.',
+        'Ground the amp to bare chassis metal with a short, fat cable. Sand paint off. A bad ground is the #1 “amp in protect” DIY miss.',
+        'Turn-on wire: blue remote from the head unit, not a constantly hot wire. RCA or a speaker-level converter from the stereo — do not splice into airbag or CAN wires.',
+        'Sub wiring must match the amp: series/parallel so the ohm load is what the amp is stable into. One ohm on an amp not rated for it cooks it. Box in a sealed or ported enclosure that fits; a sub in the clear is a torn cone.',
+        'Set gain with a phone tone or by ear at 3/4 volume — not maxed. Bass boost off until it is clean. If the radio is clipped, turning the gain up just distorts louder. Keep the power cable away from RCAs to cut whine.'
+      ]
+    },
+    {
+      id: 'exhaust',
+      title: 'Repair exhaust',
+      keywords: ['exhaust', 'muffler', 'catalytic', 'flex pipe', 'exhaust leak'],
+      steps: [
+        'Cold vehicle on jack stands, never a bumper jack. Look from the manifolds back: cracked manifolds, blown manifold gaskets (tick that is exhaust), rusted flex pipe, holes in the muffler, broken hangers, loose clamps.',
+        'A leak before the rear O2 can fake a catalyst code. A leak after is mostly noise and fumes. Do not patch a converter with foil and expect it to pass a test.',
+        'Clamps and sleeves fix a slip-fit hole. Cut rust back to solid pipe; a clamp on paper-thin rust will leak tomorrow. U-clamps crush pipes — use a proper exhaust clamp when you can.',
+        'Flex pipe is a common truck failure. Replace the section; do not wrap it. Support the converter so you do not rip the next joint.',
+        'Manifold studs snap. Soak them, use a six-point socket, heat if you know how. A broken manifold stud is an extractor job — do not round ten of them.',
+        'Start it and listen. Exhaust in the cabin is carbon monoxide — fix it before a long drive. After welding, check nearby brake/fuel lines and the spare tire well for heat damage.'
+      ]
+    },
+    {
+      id: 'headlights',
+      title: 'Change headlights',
+      keywords: ['headlight', 'headlamp', 'high beam', 'low beam'],
+      steps: [
+        'Use the bulb number on the old lamp or the owner-manual chart (H11, 9005, 9007, H13, etc.). LED housings and halogen housings are not mix-and-match if the cutoff is wrong — you will blind people.',
+        'Many trucks: reach behind the headlamp, twist the bulb, pull. Do not touch a halogen glass with fingers; skin oil steam-cracks it. Use gloves or the paper the bulb came in.',
+        'If you cannot reach it, the whole headlamp assembly often has 2–3 bolts along the radiator support plus a clip. Bumper covers on some cars have to loosen. Mark the aim screws so you do not lose aim.',
+        'Connector burned? Repair the pigtail. A new bulb in a melted plug will fail again. Headlight fuses and a failed ground at the radiator support are common “both lights dead” causes.',
+        'Aim on level ground 25 feet from a wall if you moved the housing: cutoff should sit just below lamp height on the wall, slightly down to the right in the US. Wrong aim is illegal and dangerous.',
+        'Aftermarket HID in a reflector halogen housing is a glare bomb. If you want HID/LED, use a housing made for it.'
+      ]
+    },
+    {
+      id: 'tail_lights',
+      title: 'Change tail lights',
+      keywords: ['tail light', 'taillight', 'brake light', 'rear lamp'],
+      steps: [
+        'Open the tailgate/trunk. Most tails are two screws in the plastic or nuts under a trim cover. Do not pry the lens from the outside until those fasteners are out.',
+        'Bulb numbers differ for tail, brake, and reverse. Match them. LED replacements must be CAN-bus compatible on some vehicles or the cluster will scream “lamp out.”',
+        'Green crust in the socket is water. Clean with electrical cleaner, dielectric grease on the bulb base, and fix the cracked lens or missing gasket so it does not fill again.',
+        'If the whole side is dead, check the ground (often a screw in the cargo area or a splice in the harness at the frame). Tow-plug corrosion takes out tails on trucks.',
+        'Brake light that stays on is often the brake-light switch on the pedal, not the bulb. Third-brake (CHMSL) is a separate bulb or LED strip in the cab/spoiler.',
+        'Torque the lens screws snug. Cracked plastic is a leak. Test tail, brake, turn, and reverse before you put the trim back.'
+      ]
+    },
+    {
+      id: 'vehicle_lights',
+      title: 'All vehicle lights (markers, turns, reverse, interior, license)',
+      keywords: ['lights', 'marker', 'turn signal', 'reverse light', 'interior light', 'license plate light', 'fog light'],
+      steps: [
+        'Owner-manual fuse chart first. One dead function = that fuse, bulb, or ground. Everything crazy = battery/grounds, not 20 bulbs.',
+        'Front: low, high, park/marker, turn, fog, daytime running. Each has a bulb or LED module and a fuse. DRL is often the PCM/BCM, not a separate switch.',
+        'Side markers and trailer-tow plugs share grounds on many trucks. Sand the ground screw on the core support or frame.',
+        'Rear: tail, brake, turn, reverse, license-plate, CHMSL. A magnet-mount trailer light that was wired into the wrong side will flash opposite.',
+        'Interior: dome/map often have a door-jamb switch or BCM delay. A dome that will not die is a door switch or a dimmer left on. License lights are two tiny bulbs above the plate — they rust out and fail inspections.',
+        'Replace in pairs when one headlamp or one brake is dim. After any work, walk around: park, brake, both turns, hazards, reverse, high beam, fog. Do not leave a trailer plug hanging wet.'
+      ]
+    },
+    {
+      id: 'hubs',
+      title: 'Replace a hub / wheel bearing',
+      keywords: ['hub', 'wheel bearing', 'unit bearing', 'locking hub'],
+      steps: [
+        'Growl that changes with speed, or play at the rotor with the wheel off the ground, is a bearing. ABS light plus that growl is often the hub (the tone ring lives in it).',
+        'Jack stand, wheel off, caliper hung with a wire (do not let it hang on the hose), rotor off. 4WD front hubs may have a CV axle nut in the center — a high-torque nut; use the right socket and a breaker, and a new nut if it is staked or one-time.',
+        'Hub is usually 3–4 bolts from the back of the knuckle. Soak them. A stubborn hub is a slide hammer on the flange, not a torch on the CV boot.',
+        'Bolt the new hub (ABS wire routed the same path, clip it so it does not rub the wheel). Axle nut to the spec and stake/replace as required. This nut is not “tight enough.” Wrong torque walks the bearing.',
+        'Reinstall rotor, caliper, wheel. Torque lug nuts in a star on the ground. Pump the brake pedal before you roll — the pads are pushed back.',
+        'Locking 4WD hubs (manual) are a different part on the flange. If 4WD will not engage, diagnose vacuum/electric actuator before you buy bearings.'
+      ]
+    },
+    {
+      id: 'flat_tire',
+      title: 'Change a flat tire',
+      keywords: ['flat', 'tire', 'spare', 'lug nuts', 'jack'],
+      steps: [
+        'Hazards on, well off the road, parking brake, Park, wheel chock on the opposite corner if you have one. Do not change a tire in a live lane.',
+        'Crack the lug nuts loose while the tire is still on the ground — half a turn. If they will not move, you need a longer bar, not jumping on the wrench at a bad angle.',
+        'Factory jack only at the pinch weld or frame point in the owner’s manual. Not the floor pan, not the control arm, not the plastic sill. Spare: under-bed winch on many trucks (tool in the glove box or under rear seat) or on a rear carrier.',
+        'Jack until the flat is just off the ground. Remove nuts, swap the wheel, snug nuts in a star, lower it, then torque in a star. Lug torque is on the door jamb or the manual — typically far tighter than hand-tight, not impact-gun gorilla.',
+        'A donut spare is speed- and mileage-limited. Check its pressure; they are often low. It is not for the highway at 80.',
+        'Get the flat fixed. If the truck has a full-size spare, still re-torque after a short drive. TPMS light after a swap is normal until the spare has a sensor or you swap the sensor.'
+      ]
+    },
+    {
+      id: 'plugs_wires',
+      title: 'Change spark plugs and wires',
+      keywords: ['spark plug', 'plug wires', 'ignition wires', 'coil boot'],
+      steps: [
+        'Buy the exact plug (heat range, reach, and whether it is the one-piece coil-on-plug or a wired cap). Gap only if the brand says to; many iridiums are pre-gapped. Door-jamb or manual has the gap if you need it.',
+        'Engine cold. On coil-on-plug: unplug the coil, bolt out, pull the coil. On a distributor/waste-spark with wires: pull one wire at a time at the boot, twist, do not yank the core.',
+        'Spark-plug socket and a wobble. Count turns so you know depth. If a Ford 5.4 three-valve style two-piece plug breaks, stop and use the extraction kit — do not drop the porcelain in the cylinder.',
+        'Blow dirt out of the well before the old plug comes out. Anti-seize only if the plug maker and the aluminum-head procedure say so; many nickel-plated plugs go in dry. Snug, then the small extra angle the spec lists. Over-torque strips the head.',
+        'Wires: route in the original looms, clip them, no wire against an exhaust manifold. Coil boots that were oil-soaked get replaced with the valve-cover job.',
+        'One cylinder at a time so you do not mix firing order. Start it. A misfire after plugs is a boot not seated, a swapped coil, or a wire on the wrong tower.'
+      ]
+    },
+    {
+      id: 'oil',
+      title: 'Change the oil and filter',
+      keywords: ['oil change', 'oil filter', 'lube'],
+      steps: [
+        'Use the oil grade on the oil cap / owner’s manual (5W-30, 0W-20, dexos, etc.). The wrong viscosity on a VVT engine sets cam codes. Capacity is in the manual — do not guess from a “5.3 takes 6 quarts” memory if this engine has a different pan.',
+        'Warm engine, level ground, parking brake. Drain plug into a pan big enough. Filter: wrench it off; it will dribble. If it is a cartridge, pull the cap on the top of the engine and swap the element and the O-rings.',
+        'New crush washer on the drain plug if it uses one. Hand-start the filter after oiling the gasket; snug, do not lever it with a pipe. Cartridge cap O-rings lubed so they do not pinch.',
+        'Fill, wait, check the stick (or electronic gauge per the procedure). Start, look for leaks at the plug and filter, shut off, recheck level. Overfill is as bad as low.',
+        'Reset the oil-life monitor if this vehicle has one (often a pedal/button sequence in the manual). A sticker on the windshield does not reset the PCM.',
+        'Dispose of oil and the filter at a parts store or recycler. Do not dump it. If the drain oil is glittery or milky, stop treating this as a routine change — that is a diagnosis.'
+      ]
+    },
+    {
+      id: 'brake_fluid',
+      title: 'Change brake fluid',
+      keywords: ['brake fluid', 'bleed brakes', 'dot 3', 'dot 4'],
+      steps: [
+        'Use the DOT rating on the master-cylinder cap (DOT 3 or 4). Do not put mineral oil or ATF in brakes. DOT 5 silicone is not a mix-in.',
+        'Fluid that is dark or the test strip shows high water means a flush. A low pedal after a pad job is air, not “just add fluid.”',
+        'Suck old fluid from the master (turkey baster that never saw turkey), fill with new. Never let the master run dry or you are bleeding the whole system plus ABS.',
+        'Bleed sequence is in the manual (often farthest wheel from the master first: RR, LR, RF, LF on many RWD trucks). Hose on the bleeder into a bottle, helper slow-presses the pedal, you open/close the bleeder. Pedal must stay off the floor.',
+        'ABS-equipped vehicles may need a scan tool to cycle the ABS pump for a full flush. A gravity or pedal bleed still replaces most of the fluid in the calipers.',
+        'Firm pedal, no leaks, cap on. Paint and skin hate brake fluid — rinse it now. If the pedal fades after a short drive, you have a leak or a caliper hanging up, not a “need more fluid” problem.'
+      ]
+    },
+    {
+      id: 'trans_fluid',
+      title: 'Change transmission fluid',
+      keywords: ['transmission fluid', 'tranny fluid', 'atf', 'trans filter'],
+      steps: [
+        'Identify the trans. The dipstick (if any) or a fill plug on a sealed unit, and the tag on the case, tell you the fluid: Dexron, Mercon LV, ATF+4, CVT fluid, etc. The wrong bottle will chatter or kill a clutch pack.',
+        'Sealed “lifetime” units still drain; they need a scan-tool temperature and a level-at-the-hole procedure. Do not dump five quarts in the dipstick of a sealed 8-speed and call it full.',
+        'Pan-drop service (many 4-speeds): drain, pan down, replace the filter and pan gasket, clean magnet, bolts even snug so the pan does not warp. Fill through the dipstick with the exact spec fluid.',
+        'Check level the way this truck wants: often hot, running, in Park or Neutral, on level ground. Add in pints, not gallons. Pink and sweet is normal ATF; brown and burnt is a warning — a service may help, a miracle in a can will not rebuild clutches.',
+        'CVT and dual-clutch units have their own fluid and often a dealer-level fill. If you cannot find a pan, do not punch a hole.',
+        'Leak at the cooler lines or pan is a clamp/gasket, not a fluid type change. After a fill, shift through gears with the brake held, then recheck level.'
+      ]
+    },
+    {
+      id: 'windshield',
+      title: 'Replace a windshield',
+      keywords: ['windshield', 'windscreen', 'glass'],
+      steps: [
+        'A rock chip in the driver’s view often fails inspection and is a full glass, not a fill. Camera/radar behind the glass (lane keep, auto high beam) needs calibration after a windshield — budget that, or the systems lie.',
+        'This is urethane, not window caulk. Cold knives, two people, and the right urethane and primer from a glass job. A tube from the hardware store is a leak and a glass that can pop out in a crash.',
+        'Cover the dash. Cut the old urethane, lift the glass with cups. Do not fold the cowl or the VIN plate. Save the clips and the molding; order new if they broke.',
+        'Prime the pinch weld where you cut to bare metal. Bead the urethane as the card shows. Set the glass on the spacers, dump it once, tape it. Wrong position and the cowl never seals.',
+        'Drive-away time is on the urethane tube (often several hours, longer in cold). Airbags and the windshield are a system — do not skip cure time. Keep the windows cracked so slam-doors do not push the glass back out.',
+        'If you are not set up for this, a mobile glass crew is the DIY-equivalent that still uses real urethane. Recalibrate cameras per the vehicle procedure after the glass is in.'
+      ]
+    },
+    {
+      id: 'injectors',
+      title: 'Change fuel injectors',
+      keywords: ['injector', 'fuel injector', 'rail'],
+      steps: [
+        'Relieve pressure: fuel-pump fuse/relay out, crank, rags ready. Disconnect negative battery. Gasoline on a hot manifold is a fire. GDI (high-pressure pump on the head) is not a casual rail crack — that pressure can pierce skin. If it is GDI and you are not tooled, stop.',
+        'Unplug coils or the intake if they block the rail. Photograph injector connectors. Unbolt the rail, pull it with the injectors; pry the clips, not the plastic tops.',
+        'New O-rings and spacer seals, oiled with clean oil or the lube in the kit. Do not reuse crushed rings. Match flow-rate / color / part number. A cheap unmatched set will run rich/lean cylinder to cylinder.',
+        'Seat each injector fully, rail on straight, bolts even. Prime the key on/off a few times and look for wet fuel before you start it.',
+        'If you pulled an intake, new gaskets, no RTV in the ports. Vacuum leaks after an injector job are almost always an intake gasket or a PCV hose left off.',
+        'Start, idle, sniff. A miss on one cylinder is a connector not clicked or an O-ring that leaked down. Recheck for fuel smell after a heat cycle.'
+      ]
+    },
+    {
+      id: 'brakes',
+      title: 'Change brake pads, discs, and rotors',
+      keywords: ['brake pads', 'rotors', 'discs', 'brake job', 'caliper'],
+      steps: [
+        'One axle at a time so the other side still has brakes. Jack stand, wheel off. Hang the caliper with a wire. Do not pinch or stretch the hose.',
+        'Pads: retainers/pins/clips out, pads out. If the inner pad is worn to the backing and the outer is thick, the caliper slides are frozen — clean and lube the slide pins with brake lube, not regular grease. A seized caliper gets replaced, not just pads.',
+        'Rotors/discs: usually two screws or they just slide off. Minimum thickness is stamped on the hat. Below that, or deep grooves/cracks, replace. Cheap thin rotors warp. Clean the hub face so the new rotor sits flat (rust here is a pedal pulse).',
+        'Compress the piston with a tool; on many rears you must twist (parking-brake in the piston). Watch the master-cylinder level so it does not overflow. New pads in the same orientation, new hardware, a smear of brake lube on the ears — not on the friction.',
+        'Torque caliper bracket and caliper bolts to the spec for this vehicle. Lug nuts in a star on the ground. Pump the pedal until it is firm before you move the truck. The first stop will not be there if you skip this.',
+        'Bed pads per the pad maker (a few moderate stops from ~30–40, then a cool-down). No hard panic stop in the first miles. Recheck lug torque. A pull to one side is a sticky slide or a hose that collapsed internally.'
+      ]
+    },
+    {
+      id: 'control_arms',
+      title: 'Replace control arms',
+      keywords: ['control arm', 'ball joint', 'bushing', 'a-arm'],
+      steps: [
+        'Clunk on bumps, inner tire wear, or a visibly torn ball-joint boot. Confirm with a pry bar on the joint (wheel off the ground) and a look at the bushings. A dry-rotted bushing is an arm, not an alignment alone.',
+        'Jack stand under the frame, not under the arm you are removing. Support the knuckle so the CV or brake hose is not hanging. Mark cam bolts if the arm has alignment cams — you want to get close to the old setting.',
+        'Ball-joint nut: the taper is stuck. A pickle fork wrecks the boot (fine if the arm is scrap). A pickle-fork vs. a two-jaw puller: use a puller if you are reusing the joint. Soak the inner bushing bolts; they rust to the subframe.',
+        'Compare the new arm (offset, ball-joint direction, sensor tab). Some trucks have different left/right and upper/lower. Torque the bushing bolts at ride height (arm loaded), not with the wheel hanging, or the bushings tear in a week.',
+        'Torque ball-joint nuts to spec and replace cotter pins / prevailing-torque nuts. Never reuse a stretched castle-nut setup without a new pin.',
+        'Alignment after any arm. Driving it “to the shop tomorrow” on a slammed camber setting eats the tire. Recheck the ABS wire and brake hose routing.'
+      ]
+    },
+    {
+      id: 'four_wd_axles',
+      title: 'Replace 4WD / 4-wheel axles (CV shafts and axle shafts)',
+      keywords: ['axle', 'cv axle', '4wd axle', 'four wheel', 'halfshaft', 'u-joint', 'front axle'],
+      steps: [
+        'Clicking on a slow turn is a CV joint. Vibration that changes in 4HI vs 2HI can be a front axle or a U-joint. A torn CV boot that has been dry is a shaft, not a clamp.',
+        'Front independent 4WD: axle nut in the hub, lower the arm or the strut to drop the shaft, pry the inner trip from the differential. Catch ATF/gear oil. New axle nut if it is staked. Do not hammer on the outer CV threads — use a pusher.',
+        'Solid front axle (Dana-style): the shaft often slides out after the hub/locking hub and the inner axle seal. U-joint replacement is a press and clips; a bad U-joint throws the cap and wrecks the yoke. Match the joint series (1310, 1350, etc.).',
+        'Rear axles on many trucks: C-clip (cover off the pumpkin, push the shaft in, C-clip out) or a four-bolt flange. Gear oil will dump when the cover comes off — new gasket and the right gear oil + friction modifier if it is a limited slip.',
+        'Do not mix left and right lengths. Inner splines must seat. A shaft that is not fully in will walk out and take the differential with it. Torque the axle nut / flange bolts to spec; this is another “not impact-gun forever” joint.',
+        'Fill the differential or transaxle back to the fill-plug hole. Cycle 4WD in a safe lot. Click remaining after a new CV is usually the other side — replace in pairs if the boots are both dead. Alignment if you dropped the arms.'
+      ]
+    }
+  ];
+
+  function listCommonJobs() {
+    return COMMON_JOBS;
+  }
+
+  function relatedJobsFor(subsystems, symptoms, notes, codes) {
+    const hay = ((symptoms || []).join(' ') + ' ' + String(notes || '') + ' ' + (codes || []).join(' ')).toLowerCase();
+    const ids = new Set();
+    const add = (id) => ids.add(id);
+    if ((subsystems || []).includes('starting_charging') || /no crank|starter/.test(hay)) add('starter');
+    if ((subsystems || []).includes('charging_voltage') || /battery light|alternator|charging/.test(hay)) add('alternator');
+    if ((subsystems || []).includes('ignition_misfire') || /misfire|spark plug/.test(hay)) add('plugs_wires');
+    if ((subsystems || []).includes('air_fuel') || /injector|p020/.test(hay)) add('injectors');
+    if ((subsystems || []).includes('abs_brakes') || /brake|abs/.test(hay)) { add('brakes'); add('brake_fluid'); add('hubs'); }
+    if ((subsystems || []).includes('transmission') || /trans|tranny|shift/.test(hay)) add('trans_fluid');
+    if ((subsystems || []).includes('timing_oiling') || /oil leak|valve cover/.test(hay)) { add('oil'); add('valve_cover'); }
+    if ((subsystems || []).includes('driveline_chassis') || /hub|axle|control arm/.test(hay)) { add('hubs'); add('control_arms'); add('four_wd_axles'); }
+    if (/exhaust|muffler/.test(hay)) add('exhaust');
+    if (/headlight|tail light|lamp/.test(hay)) { add('headlights'); add('tail_lights'); add('vehicle_lights'); }
+    if (/stereo|amp|subwoofer|radio/.test(hay)) { add('stereo'); add('amp_sub'); }
+    if (/windshield|glass/.test(hay)) add('windshield');
+    if (/flat|tire|lug/.test(hay)) add('flat_tire');
+    return COMMON_JOBS.filter((job) => ids.has(job.id));
+  }
+
   const SUBSYSTEM_DIY = {
     ignition_misfire: misfireGuide('Ignition / misfire').diySteps,
     air_fuel: DETAILED_GUIDANCE.P0171.diySteps,
@@ -1039,6 +1326,7 @@ const DiagEngine = (() => {
       diyTitle,
       diySteps: primaryDiy,
       rebuildGuide: rebuildIndicated ? ENGINE_REBUILD : null,
+      relatedJobs: relatedJobsFor(topSubsystems, symptoms, notes, codes),
       warnings: warningList,
       codeCards: detailedCodeCards,
       disclaimers: [
@@ -1067,6 +1355,9 @@ const DiagEngine = (() => {
     ENGINE_REBUILD.stages.forEach((stage) => {
       add(ENGINE_REBUILD.title + ' — ' + stage.title, stage.steps);
     });
+    COMMON_JOBS.forEach((job) => {
+      add('How-to — ' + job.title, job.steps);
+    });
     Object.entries(DETAILED_GUIDANCE).forEach(([code, guide]) => {
       if (/^P030[1-9]$/.test(code) || /^P031[0-2]$/.test(code)) return;
       if (/^P020[2-8]$/.test(code) || /^P035[2-8]$/.test(code)) return;
@@ -1078,7 +1369,7 @@ const DiagEngine = (() => {
     return Array.from(seen.values());
   }
 
-  return { APP_VERSION, computeStats, searchDtc, lookupCodes, buildAnalysis, listRepairPlaybooks, diyStepsFor, engineRebuildGuide };
+  return { APP_VERSION, computeStats, searchDtc, lookupCodes, buildAnalysis, listRepairPlaybooks, diyStepsFor, engineRebuildGuide, listCommonJobs };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = DiagEngine;

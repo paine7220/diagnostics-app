@@ -35,12 +35,12 @@ check('index.html loads real script files', () => {
 
 check('button ids used by app.js exist in index.html', () => {
   const ids = [
-    'btnRunDiagnosisTop', 'btnLookupTop', 'btnRebuildTop', 'btnSaveCaseTop', 'btnExportTop',
+    'btnRunDiagnosisTop', 'btnLookupTop', 'btnRebuildTop', 'btnJobsTop', 'btnSaveCaseTop', 'btnExportTop',
     'btnLookup', 'btnSearchDtc', 'btnClearCodes', 'btnRunDiagnosis', 'btnRebuildDiagnosis',
     'btnSaveCase', 'btnLoadCase', 'btnClearCase', 'btnExport',
     'btnAudioRecord', 'btnAudioUpload', 'btnStartCamera', 'btnVideoUpload',
     'btnCaptureFrame', 'btnStopCamera', 'btnPhotoUpload', 'acceptLegal',
-    'codes', 'dbQuery', 'results', 'fluidOut', 'appVersion', 'solutionQuery', 'allSolutions', 'rebuildCard', 'rebuildStages'
+    'codes', 'dbQuery', 'results', 'fluidOut', 'appVersion', 'solutionQuery', 'allSolutions', 'rebuildCard', 'rebuildStages', 'jobsCard', 'jobQuery', 'commonJobs'
   ];
   for (const id of ids) {
     assert.ok(indexHtml.includes(`id="${id}"`), 'missing id ' + id);
@@ -199,11 +199,61 @@ check('engine rebuild guide is a full pull-assemble-break-in path', () => {
   assert.ok(analysis.diySteps.join(' ').toLowerCase().includes('compression'));
 });
 
+check('common how-to jobs cover requested repairs', () => {
+  const sandbox = { module: { exports: {} }, window: {} };
+  vm.runInNewContext(dtcJs + '\n' + engineSrc + '\nmodule.exports = DiagEngine;', sandbox);
+  const engine = sandbox.module.exports;
+  assert.ok(typeof engine.listCommonJobs === 'function');
+  const jobs = engine.listCommonJobs();
+  const ids = jobs.map((job) => job.id);
+  [
+    'starter', 'alternator', 'valve_cover', 'stereo', 'amp_sub', 'exhaust',
+    'headlights', 'tail_lights', 'vehicle_lights', 'hubs', 'flat_tire',
+    'plugs_wires', 'oil', 'brake_fluid', 'trans_fluid', 'windshield',
+    'injectors', 'brakes', 'control_arms', 'four_wd_axles'
+  ].forEach((id) => {
+    assert.ok(ids.includes(id), 'missing job ' + id);
+  });
+  jobs.forEach((job) => {
+    assert.ok(job.steps && job.steps.length >= 5, job.id);
+  });
+  const hay = jobs.map((job) => job.title + ' ' + job.steps.join(' ')).join(' ');
+  assert.match(hay, /starter/i);
+  assert.match(hay, /alternator/i);
+  assert.match(hay, /valve cover/i);
+  assert.match(hay, /subwoofer/i);
+  assert.match(hay, /exhaust/i);
+  assert.match(hay, /headlight/i);
+  assert.match(hay, /tail/i);
+  assert.match(hay, /hub/i);
+  assert.match(hay, /lug nuts/i);
+  assert.match(hay, /spark plug/i);
+  assert.match(hay, /oil and filter/i);
+  assert.match(hay, /brake fluid/i);
+  assert.match(hay, /transmission fluid|ATF/i);
+  assert.match(hay, /windshield/i);
+  assert.match(hay, /injector/i);
+  assert.match(hay, /rotor/i);
+  assert.match(hay, /control arm/i);
+  assert.match(hay, /CV/i);
+  const analysis = engine.buildAnalysis({
+    vehicle: {},
+    dtcs: [],
+    symptoms: ['No crank'],
+    notes: '',
+    fluid: {},
+    mediaSummary: {}
+  }, sandbox.window.DTC_DB_DATA);
+  assert.ok((analysis.relatedJobs || []).some((job) => job.id === 'starter'));
+  assert.ok(engine.listRepairPlaybooks().some((row) => row.labels.some((label) => /How-to — Change a starter/i.test(label))));
+});
+
 check('app.js talks to DiagEngine and DTC_DB_DATA', () => {
   assert.match(appSrc, /window\.DTC_DB_DATA/);
   assert.match(appSrc, /DiagEngine\.lookupCodes/);
   assert.match(appSrc, /DiagEngine\.buildAnalysis/);
   assert.match(appSrc, /DiagEngine\.engineRebuildGuide/);
+  assert.match(appSrc, /DiagEngine\.listCommonJobs/);
   assert.match(appSrc, /1\.2\.0/);
 });
 
