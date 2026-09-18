@@ -57,6 +57,8 @@ video,img,canvas{max-width:100%;border-radius:14px;border:1px solid #4a310e;back
 .hypo{border:1px solid #4a310e;border-radius:12px;padding:10px;margin:0 0 8px;background:#101010}
 .playbook{border:1px solid #4a310e;border-radius:12px;padding:8px 10px;margin:0 0 8px;background:#101010}
 .playbook summary{font-weight:700;color:#ffd27b;cursor:pointer}
+#rebuildCard .notice{margin-bottom:10px}
+#rebuildStages .playbook{margin-bottom:10px}
 .diy ol,.diy-list{padding-left:1.2rem}
 .diy li,.diy-list li{margin:0 0 10px;line-height:1.35}
 .doc-nav{margin:0 0 14px}

@@ -527,6 +527,149 @@ const DiagEngine = (() => {
     'A new ABS module is often a programming job. Prove power, ground, and a dry connector first. You still have hydraulic brakes — drive gently, not like the ABS light is a decoration on ice.'
   ];
 
+  const ENGINE_REBUILD = {
+    title: 'Engine rebuild',
+    summary: 'A real rebuild is: prove the bottom end or heads are dead, pull the engine, measure, send the machine work out, assemble with new fasteners where required, then prime and break in. Torque, bearing sizes, and bolt stretch come from THIS engine’s service data — not a guess and not one number for every VIN.',
+    warnings: [
+      'A heat shield, belt, or exhaust rattle is not a rebuild. Prove it first.',
+      'Torque-to-yield head, rod, and main bolts are one-time use. Do not reuse them.',
+      'Do not invent torque. Use the spec for this exact engine code (stamped on the block or on the build tag).'
+    ],
+    stages: [
+      {
+        id: 'prove',
+        title: '1. Prove you need a rebuild',
+        steps: [
+          'Stop driving if it knocks under load, the oil light is on, oil is glittery, or coolant is milky. Another 10 miles can turn a bearing job into a cracked block.',
+          'Rule out the cheap noises: heat shields, exhaust flex pipe, a loose pulley, a torque converter, and a rod-shaped knock from low oil. Use a long screwdriver as a stethoscope on the oil pan vs. the valve cover vs. the bellhousing — keep clear of the belt.',
+          'Pull the oil filter, cut it open, and look in the pleats. Fine gray paste is wear. Chunks of bearing material or glitter mean the crank has been eating bearings. That is a rebuild or a replacement engine, not an additive.',
+          'Compression test, engine warm, throttle held open, all plugs out, battery strong. Write every cylinder. A healthy gas engine is usually in a tight group (often roughly 125–180 psi depending on the engine) with no cylinder far below the others. One dead hole with three good ones can be a head/valve job, not a full bottom end.',
+          'Leak-down if you have the tool: air in the spark-plug hole at TDC compression. Hiss in the intake = intake valve. Exhaust = exhaust valve. Oil cap/breather = rings. Radiator bubbles = head gasket or crack. That tells you heads vs. rings vs. gasket before you buy a short block.',
+          'If compression is even and leak-down is low, do not tear the engine down because a knock-sensor code set. Fix the sensor circuit. If compression is in the basement on several holes, or a rod knocks with metal in the oil, go to stage 2.'
+        ]
+      },
+      {
+        id: 'shop',
+        title: '2. Tools, space, and what you do not do at home',
+        steps: [
+          'You need: engine hoist rated for the engine plus a margin, a stand that bolts to the block, jack stands, a torque wrench that actually clicks (or a beam gauge), a 1/2-inch breaker, zip bags and a marker, assembly lube, plastigage, a ring compressor, and a camera.',
+          'You send out: align-hone or bore and hone, crank grind if journals are scored, connecting-rod resize if the big ends are out-of-round, pressure-test and resurface heads, valve job, and a tank clean of the block. A backyard “glaze bust” with dish soap and a worn brush is not a hone.',
+          'Decide replace vs. rebuild. A used engine with paperwork can be cheaper than a 0.030-over kit plus machine work. A rebuild wins when the block is unique, the truck is worth it, or you already know the rotating assembly is good.',
+          'Photograph every connector, hose, and bracket before a wrench turns. Bag bolts by location (intake, exhaust, accessory, bellhousing). Mixing 8.8 and 10.9 and TTY bolts is how heads lift or threads pull.',
+          'Write the engine RPO / casting / VIN suffix. Parts catalogs lie if you only say “5.3” or “5.4.” AFM/DOD, FlexFuel, and diesel heads are not interchangeable with the lookalike next to them.'
+        ]
+      },
+      {
+        id: 'pull',
+        title: '3. Pull the engine',
+        steps: [
+          'Disconnect the negative battery cable. Drain coolant into a pan and oil into a pan. Relieve fuel pressure (pump fuse/relay out, crank). Support the vehicle on stands if the trans stays in the truck.',
+          'Recover A/C if the compressor is coming with the engine and local law requires it — do not vent refrigerant. Unbolt accessories you will reuse (alternator, A/C, power steering) after labeling belts and hoses.',
+          'Unplug every sensor and coil. Take pictures of the harness routing over the valve covers. Tie the harness to the core support so it does not rip.',
+          'Unbolt the exhaust at the manifolds or the downpipes. Support the converter so it does not rip the flex pipe. On 4WD, the exhaust and steering shaft often fight you — do not pry on the intermediate shaft.',
+          'Transmission: either separate at the bellhousing (support the trans with a jack; torque converter stays on the trans — remove the converter bolts from the flexplate first through the access hole) or pull engine+trans as a unit if you have the height. Mark the converter/flexplate relationship.',
+          'Hoist on the manufacturers’ lift points or a leveler on the intake/head bolt holes with the right adapters. A chain choking the A/C compressor is how you crack a case. Lift a hair, remove the last mount bolts, then out. Set the engine on a stand before you crawl under it.'
+        ]
+      },
+      {
+        id: 'teardown',
+        title: '4. Teardown — keep it organized',
+        steps: [
+          'Mount the engine. Remove intake, valve covers, harmonic balancer (proper puller — not three bolts and a slide hammer on a pressed snout), front cover, oil pan, and oil pump.',
+          'Rotate to TDC number 1 and photograph the timing marks on the chain/gears/belt before you cut anything. If the chain is slack or a tooth is skipped, write that down — it explains bent valves on an interference engine.',
+          'Heads: loosen in the reverse of the published sequence (outside-in is the usual reverse of a center-out torque pattern). Lift straight. Slide, do not pry, on a stuck gasket. Keep head bolts in order on cardboard if any are reusable — most modern head bolts are not.',
+          'Rod caps: number them. Cap 3 only fits rod 3, same direction. Unbolt a pair, tap the rod, catch the piston in your hand with a rag on the bore so the bolts do not gouge the crank. Bag rings with that piston.',
+          'Main caps: factory caps are direction- and position-specific (arrows, cast numbers). Photograph before they come off. Lift the crank with both hands; do not ding a journal on the block.',
+          'Do not throw the old bearings away yet. Lay them out in order. A black wiped #2 rod bearing tells you which journal to mic extra carefully.'
+        ]
+      },
+      {
+        id: 'inspect',
+        title: '5. Inspection and the machine-shop ticket',
+        steps: [
+          'Journals: fingernails catching a ridge means grind. Rainbow color or a ground-in bearing means the crank may be scrap. The shop mics them; you do not guess undersize.',
+          'Bores: a ridge at the top you can hook with a fingernail usually means a ridge reamer plus hone or a bore-and-hone to the next piston size. Deep score from a broken ring can force an overbore or a sleeve.',
+          'Block deck: look for a washed-out fire ring (head gasket) and a crack between valves or from a freeze plug. The shop pressure-tests. A cracked valley on some V8s is a replacement block.',
+          'Heads: check for a warped deck with a straightedge and feeler (the limit is in the service data). Burned exhaust valves, cracked seats, and coolant in a cylinder are a valve job plus pressure test — not “just a gasket.”',
+          'Write the shop ticket in one list: hot-tank block, mag the crank, grind crank if needed, resize rods, hone or bore, deck if warped, install cam bearings if you pulled them, pressure-test and valve-job heads, replace freeze plugs and oil galley plugs. Ask for the actual measurements back on paper (bore, main, rod, deck).',
+          'If the shop says the block is too thin to bore, or a main saddle is walked, stop. That is a replacement block or a used engine. Do not assemble a walked main.'
+        ]
+      },
+      {
+        id: 'parts',
+        title: '6. Parts kit — buy once',
+        steps: [
+          'Match the kit to the machine work: standard pistons if they honed only; 0.010 / 0.020 / 0.030 oversize only if they bored to that. Do not mix a 0.030 piston with a standard ring set.',
+          'Bearings: use the size the shop ground to (std, 0.010, 0.020 undersize). Coated bearings help a tow rig; they do not fix a bent rod.',
+          'Always new: rings, bearings, gaskets, timing chain/belt + tensioner + guides, oil pump (or at least the pressure relief), freeze plugs if the shop did not, thermostat, oil filter, coolant, and the one-time TTY bolts (heads, and often rods).',
+          'Usually new: water pump, balancer if the rubber is walked, valve stem seals with the valve job, head bolts, and the oil pickup tube O-ring. Reusing a cracked pickup gasket is a dry start.',
+          'Cam and lifters: flat-tappet cams need new lifters and the break-in lube that comes with the cam. Roller cams can reuse healthy roller lifters only if they stay on the same lobes they wore to — when in doubt, replace the set.',
+          'Do not cheap out on head gaskets on an aluminum-head / iron-block engine, and do not use RTV as a head gasket. MLS gaskets want a clean, usually dry or very lightly oiled deck as the sheet for that gasket says — follow that sheet.'
+        ]
+      },
+      {
+        id: 'shortblock',
+        title: '7. Short-block assembly',
+        steps: [
+          'Wash the block until a white rag in the mains and oil galleys comes back clean. Blow galleries with air, then a light oil wipe so it does not flash-rust. Any grit you leave is a bearing.',
+          'Install freeze plugs and galley plugs with the sealant the procedure calls for. A missed galley plug is no oil pressure on first fire.',
+          'Main bearings in the block and caps, tangs in the slots, a smear of assembly lube on the faces — not a glob that blocks an oil hole. Lay the crank. Torque mains in the published sequence (usually center out) to the spec for this engine. Check that the crank spins by hand. Tight spots mean a cap is backwards or a journal is wrong — do not proceed.',
+          'Rods and pistons: rings gapped in the bore they will live in, gaps staggered (compression gaps opposite, oil-ring rails not lined up with the expander gap). Piston orientation mark (arrow/dot) to the front of the engine. Ring compressor, tap the piston down with a handle, never force a ring.',
+          'Rod bolts: assembly lube under the nuts if the spec says, torque or torque-plus-angle from the card. Plastigage is a check, not a substitute for the shop’s measurements. Wipe plastigage oil off and re-lube before final torque.',
+          'Oil pump, pickup, and pan: new pickup gasket/O-ring, pickup screen clean and not loose. RTV only where the gasket set says (usually corners of a steel pan). Over-RTV in the pan is a sucked-up chunk in the pickup.'
+        ]
+      },
+      {
+        id: 'heads',
+        title: '8. Cylinder heads',
+        steps: [
+          'Decks clean, no old gasket, no sandpaper grooves across the fire ring. Chase bolt holes with the right tap and blow them out — a wet hole hydro-locks a TTY bolt and cracks the block.',
+          'Head gasket the right way up (steam holes lined up on the coolant side). Do not flip a left/right gasket on a V engine.',
+          'Heads on straight. Head bolts oiled or dry exactly as the procedure says. Sequence is almost always center out in several passes, then an angle on TTY bolts. New bolts. No “I reused them last time.”',
+          'Rocker/shaft/OHC: lash or torque-down on a hydraulic lifter as specified. If it is a pushrod V8, install pushrods (check they are oiling) and rockers; rotate the engine by hand two full turns and confirm nothing binds.',
+          'Valvetrain noise on a fresh engine is often a dry hydraulic lifter or a pushrod not seated. It is not “run it at 3000 rpm until it quiets” unless you are on a flat-tappet cam break-in with the cam maker’s sheet in hand.'
+        ]
+      },
+      {
+        id: 'timing',
+        title: '9. Timing, front cover, and oiling',
+        steps: [
+          'Cam and crank at the marks for number 1 TDC. New chain, guides, and tensioner. A used tensioner is a common second-failure. On a belt engine, new belt, tensioner, and usually idlers — interference engines bend valves if you are a tooth off.',
+          'Verify rotation: two full turns by hand, marks come back together, valves do not kiss pistons. If it binds, stop and re-time. Do not bump it with the starter to “see.”',
+          'VVT solenoids and screens clean, new oil, correct viscosity. A rebuilt engine with the old sludged VVT solenoid will set cam codes on the first drive.',
+          'Front cover and balancer: seal installed square, balancer drawn on with the proper tool — not a hammer. A hammered balancer walks the crank snout.',
+          'Prime the oiling system before first fire: spin the oil pump with a drill primer where the engine allows it, or disable fuel/ignition and crank in bursts until the oil-pressure gauge or light responds. No primer and a dry start wipes the new bearings.'
+        ]
+      },
+      {
+        id: 'start',
+        title: '10. Install, first start, and break-in',
+        steps: [
+          'Engine in, mounts snug, converter bolts first (same marks), then bellhousing, then exhaust, then charge-air piping. New coolant, new oil and filter with the oil the ring and cam makers call for (often conventional during ring seat, then switch — read their sheet).',
+          'Fuel on, leaks off. Disable the fuel system and crank until oil pressure, then enable fuel. First fire: watch oil pressure in the first seconds. None = shut down. Do not “let it warm up” with a silent gauge.',
+          'Cooling: bleed the system. A rebuilt engine that overheats on the first idle can warp the new head job. Fans must work. No 20-minute idle in a closed garage.',
+          'Flat-tappet cam: follow the cam card (typically a period of elevated rpm immediately, varying load, no idle-only break-in). Roller cam: do not redline a cold engine; vary rpm. Either way, no towing on a green ring seal.',
+          'Ring seat: mixed road load for the distance the ring maker lists (often several hundred miles). No lugging in high gear, no repeated WOT, no long idle. Recheck oil every short trip for the first tank — some fill-up is normal, a quart every 50 miles is a problem.',
+          'After heat cycles, recheck for leaks, converter bolts, and (if the procedure says) head-bolt angle is already final — you generally do not “re-torque TTY.” Retorque only if that engine’s data still uses reusable bolts. Recheck idle learn and any cam/crank codes. If it knocks, shut it down and cut the filter again.'
+        ]
+      },
+      {
+        id: 'diesel',
+        title: '11. Diesel and interference extras',
+        steps: [
+          'Diesel: higher clamp load, often stretch bolts, head-gasket fire rings, injector sleeves, and oil in the fuel or fuel in the oil change the job. Do not use a gasoline MLS gasket or gasoline torque on a diesel head.',
+          'Glow plugs and injectors out before the head comes off if they pin the head. Broken glow plugs in the chamber are a machine-shop extraction, not a bigger hammer.',
+          'Interference gasoline engines that jumped time: leak-down every cylinder before you assume a “timing chain kit” is enough. A bent valve that you assemble over will toast the new pistons.',
+          'If you are not set up for a diesel head or a pressed-crank balancer, pay the machine shop or buy a reman. A half-rebuild that spins a bearing is more expensive than a complete job.'
+        ]
+      }
+    ]
+  };
+
+  function engineRebuildGuide() {
+    return ENGINE_REBUILD;
+  }
+
   const SUBSYSTEM_DIY = {
     ignition_misfire: misfireGuide('Ignition / misfire').diySteps,
     air_fuel: DETAILED_GUIDANCE.P0171.diySteps,
@@ -549,12 +692,9 @@ const DiagEngine = (() => {
       'Check the big battery cable at the starter for green corrosion. Replace the cable if the copper is powdery.',
       'If nothing clicks and nothing lights up, it is a battery, ground, or ignition-switch/neutral-safety issue. Confirm it is in Park and the battery is actually charged before buying parts.'
     ],
-    engine_mechanical: [
-      'Do not keep revving a knocking engine. Check oil now.',
-      'Look at the oil: shiny metal flakes or a milky chocolate color means stop driving. Tow it.',
-      'Rule out a heat shield, belt, or exhaust rattle by using a broomstick as a stethoscope on accessories with the engine idling — keep hair and sleeves away from the belt.',
-      'Internal engine work is not a first DIY step. Get a compression or leak-down test, or a shop, before you tear the front of the engine down.'
-    ],
+    engine_mechanical: ENGINE_REBUILD.stages[0].steps.concat([
+      'If compression is down on several cylinders, leak-down shows rings, or metal is in the oil, open Engine rebuild in this app and follow stages 2–10. That is the pull, machine, assemble, and break-in path.'
+    ]),
     belt_drive: [
       'Engine off. Look at the serpentine belt: cracks, glaze, or missing ribs means replace the belt. Draw the routing or take a phone picture first.',
       'Use a wrench on the tensioner square hole or bolt to slack the belt. Slip the new belt on, then ease the tensioner back.',
@@ -619,6 +759,10 @@ const DiagEngine = (() => {
     { match: 'Overheating', add: [['cooling', 30, 'symptom: overheating']] },
     { match: 'Tick', add: [['timing_oiling', 18, 'symptom: tick']] },
     { match: 'Knock', add: [['timing_oiling', 22, 'symptom: knock'], ['engine_mechanical', 26, 'symptom: knock']] },
+    { match: 'Rod knock', add: [['engine_mechanical', 40, 'symptom: rod knock']] },
+    { match: 'Low compression', add: [['engine_mechanical', 36, 'symptom: low compression']] },
+    { match: 'Burns oil', add: [['engine_mechanical', 28, 'symptom: burns oil'], ['timing_oiling', 10, 'symptom: burns oil']] },
+    { match: 'Needs engine rebuild', add: [['engine_mechanical', 42, 'symptom: needs engine rebuild']] },
     { match: 'Squeal', add: [['belt_drive', 18, 'symptom: squeal']] },
     { match: 'Charging problem', add: [['charging_voltage', 24, 'symptom: charging problem']] },
     { match: 'Battery light', add: [['charging_voltage', 28, 'symptom: battery light']] },
@@ -643,7 +787,7 @@ const DiagEngine = (() => {
     driveline_chassis: 'Chassis / driveline issue',
     powertrain_general: 'General powertrain issue',
     starting_charging: 'Starting / crank power path issue',
-    engine_mechanical: 'Internal engine mechanical risk',
+    engine_mechanical: 'Internal engine mechanical risk — rebuild path',
     belt_drive: 'Belt / pulley / accessory drive issue',
     general: 'General diagnostic path'
   };
@@ -747,6 +891,9 @@ const DiagEngine = (() => {
     if (n.includes('overheat')) scoreBucket(scores, 'cooling', 20, 'notes: overheat');
     if (n.includes("won't shift") || n.includes('wont shift')) scoreBucket(scores, 'transmission', 18, "notes: won't shift");
     if (n.includes('dead battery') || n.includes('battery light')) scoreBucket(scores, 'charging_voltage', 18, 'notes: battery complaint');
+    if (n.includes('rebuild') || n.includes('rod knock') || n.includes('spun bearing') || n.includes('low compression') || n.includes('metal in oil')) {
+      scoreBucket(scores, 'engine_mechanical', 28, 'notes: rebuild / bottom-end clue');
+    }
   }
 
   function checksFor(subsystem) {
@@ -860,26 +1007,43 @@ const DiagEngine = (() => {
       guidance: entry.detailed || guideFor(entry.code, entry.subsystem, entry.description)
     }));
 
-    const primaryDiy = (codeEntries[0] && codeEntries[0].detailed && codeEntries[0].detailed.diySteps) || primary.diySteps || SUBSYSTEM_DIY.general;
+    const wantsRebuild = (symptoms || []).some((s) => ['Needs engine rebuild', 'Low compression', 'Rod knock', 'Burns oil'].includes(s))
+      || /rebuild|rod knock|spun bearing|low compression|metal in oil/i.test(notes);
+    const rebuildIndicated = wantsRebuild || primary.bucket === 'engine_mechanical';
+    let primaryDiy = (codeEntries[0] && codeEntries[0].detailed && codeEntries[0].detailed.diySteps) || primary.diySteps || SUBSYSTEM_DIY.general;
+    let diyTitle = (codeEntries[0] && codeEntries[0].detailed && codeEntries[0].detailed.title) || primary.title;
+    if (rebuildIndicated) {
+      primaryDiy = ENGINE_REBUILD.stages[0].steps.concat([
+        'Continue with Engine rebuild stages 2–10 in this app: pull, teardown, machine shop, parts, short block, heads, timing, first start, break-in.'
+      ]);
+      diyTitle = ENGINE_REBUILD.title;
+    }
+
+    const warningList = warningsFor(topSubsystems, codes);
+    if (rebuildIndicated) ENGINE_REBUILD.warnings.forEach((line) => warningList.push(line));
 
     return {
       generatedAt: new Date().toISOString(),
       dbStats: computeStats(dtcDb),
       vehicle: input.vehicle || {},
       summary: {
-        primaryFinding: primary.title,
+        primaryFinding: rebuildIndicated ? ENGINE_REBUILD.title + ' indicated' : primary.title,
         confidence: primary.confidence,
-        shortReason: primary.reasons[0] || 'Combined DTC / symptom / media evidence.'
+        shortReason: rebuildIndicated ? (primary.reasons[0] || ENGINE_REBUILD.summary) : (primary.reasons[0] || 'Combined DTC / symptom / media evidence.')
       },
       rankedHypotheses: ranked,
-      firstChecks: primary.firstChecks,
-      likelyParts: primary.likelyParts,
-      diyTitle: (codeEntries[0] && codeEntries[0].detailed && codeEntries[0].detailed.title) || primary.title,
+      firstChecks: rebuildIndicated ? ENGINE_REBUILD.stages[0].steps.slice(0, 4) : primary.firstChecks,
+      likelyParts: rebuildIndicated
+        ? ['Machine work (hone/bore, crank, heads)', 'Rebuild kit (bearings, rings, gaskets, TTY bolts)', 'Timing set / oil pump', 'Replacement engine if the block is walked']
+        : primary.likelyParts,
+      diyTitle,
       diySteps: primaryDiy,
-      warnings: warningsFor(topSubsystems, codes),
+      rebuildGuide: rebuildIndicated ? ENGINE_REBUILD : null,
+      warnings: warningList,
       codeCards: detailedCodeCards,
       disclaimers: [
         'These DIY steps are a driveway starting path, not a factory procedure for every year, make, and engine. Confirm torque, parts, and bleed procedures for YOUR vehicle.',
+        'Engine rebuild torque, bearing undersize, and TTY angle come from this engine’s service data and the machine shop’s measurements. This app does not invent those numbers.',
         'This build is a diagnostic assistant, not a legal substitute for a certified technician or manufacturer service information.',
         'Camera, audio, and video features provide evidence-based cues only; they are not a validated laboratory test.',
         'Without a compatible vehicle interface, the app cannot directly read live ECU data from the OBD port.'
@@ -900,6 +1064,9 @@ const DiagEngine = (() => {
       }
       seen.set(key, { labels: [label], diySteps: list });
     };
+    ENGINE_REBUILD.stages.forEach((stage) => {
+      add(ENGINE_REBUILD.title + ' — ' + stage.title, stage.steps);
+    });
     Object.entries(DETAILED_GUIDANCE).forEach(([code, guide]) => {
       if (/^P030[1-9]$/.test(code) || /^P031[0-2]$/.test(code)) return;
       if (/^P020[2-8]$/.test(code) || /^P035[2-8]$/.test(code)) return;
@@ -911,7 +1078,7 @@ const DiagEngine = (() => {
     return Array.from(seen.values());
   }
 
-  return { APP_VERSION, computeStats, searchDtc, lookupCodes, buildAnalysis, listRepairPlaybooks, diyStepsFor };
+  return { APP_VERSION, computeStats, searchDtc, lookupCodes, buildAnalysis, listRepairPlaybooks, diyStepsFor, engineRebuildGuide };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = DiagEngine;

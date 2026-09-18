@@ -12,7 +12,7 @@ const state = {
 };
 
 const symptoms = [
-  'No crank','Cranks no start','Hard start','Stalling','Rough idle','Misfire','Low power','Poor fuel economy','Overheating','Tick','Knock','Squeal','Hiss','Whine','Grind','Smoke','Fuel smell','Oil leak','Coolant loss','Electrical weirdness','Transmission slip','ABS / brake issue','Charging problem','Battery light','No heat','Won’t shift','Gauge acting weird'
+  'No crank','Cranks no start','Hard start','Stalling','Rough idle','Misfire','Low power','Poor fuel economy','Overheating','Tick','Knock','Rod knock','Low compression','Burns oil','Needs engine rebuild','Squeal','Hiss','Whine','Grind','Smoke','Fuel smell','Oil leak','Coolant loss','Electrical weirdness','Transmission slip','ABS / brake issue','Charging problem','Battery light','No heat','Won’t shift','Gauge acting weird'
 ];
 
 function byId(id){ return document.getElementById(id); }
@@ -139,6 +139,10 @@ function quickLookup(){
 function searchLocalDb(){
   const q = value('dbQuery');
   if(!q){ html('codeResults','<div class="code-card">Enter a code or keyword.</div>'); showEl('codeResults'); return; }
+  if(/rebuild|short block|bottom end|ring job|rod knock/i.test(q)){
+    renderRebuildGuide();
+    showEl('rebuildCard');
+  }
   const results = DiagEngine.searchDtc(state.dtcDb, q);
   renderLookupCards(results);
 }
@@ -223,6 +227,14 @@ function analysisToText(analysis){
   lines.push('');
   lines.push(`DIY repair steps${analysis.diyTitle ? ' — ' + analysis.diyTitle : ''}`);
   (analysis.diySteps || []).forEach((x, i) => lines.push(`${i+1}. ${x}`));
+  if(analysis.rebuildGuide && analysis.rebuildGuide.stages){
+    lines.push('');
+    lines.push('Engine rebuild stages');
+    analysis.rebuildGuide.stages.forEach((stage) => {
+      lines.push(stage.title);
+      (stage.steps || []).forEach((x, i) => lines.push(`  ${i+1}. ${x}`));
+    });
+  }
   lines.push('');
   lines.push('First checks');
   (analysis.firstChecks || []).forEach((x, i) => lines.push(`${i+1}. ${x}`));
@@ -456,6 +468,7 @@ function renderAnalysis(analysis){
       <div class="small mt-6">${esc(vehicleLine)}</div>
     </div>
     <div class="result-block"><h3>DIY repair steps${analysis.diyTitle ? ' — ' + esc(analysis.diyTitle) : ''}</h3><ol class="checks diy-list">${list(analysis.diySteps)}</ol></div>
+    ${analysis.rebuildGuide ? `<div class="result-block"><h3>Engine rebuild</h3><div class="small">${esc(analysis.rebuildGuide.summary || '')}</div><p class="small mt-8"><a href="#rebuildCard">Open the full rebuild stages</a></p></div>` : ''}
     <div class="result-block"><h3>Top ranked causes</h3>${hypos}</div>
     <div class="result-block"><h3>First checks</h3><ol class="checks">${list(analysis.firstChecks)}</ol></div>
     <div class="result-block"><h3>Likely parts / paths</h3><ol class="checks">${list(analysis.likelyParts)}</ol></div>
@@ -473,6 +486,8 @@ function bindEvents(){
   byId('btnClearCodes').onclick = () => { byId('codes').value = ''; html('codeResults',''); };
   byId('btnRunDiagnosis').onclick = runDiagnosis;
   byId('btnRunDiagnosisTop').onclick = runDiagnosis;
+  const rebuildBtn = byId('btnRebuildTop');
+  if(rebuildBtn) rebuildBtn.onclick = () => { renderRebuildGuide(); showEl('rebuildCard'); };
   byId('btnSaveCase').onclick = saveCase;
   byId('btnSaveCaseTop').onclick = saveCase;
   byId('btnLoadCase').onclick = loadCase;
@@ -511,6 +526,21 @@ function bindEvents(){
     solutionQuery.addEventListener('input', () => renderAllSolutions(solutionQuery.value));
     solutionQuery.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); renderAllSolutions(solutionQuery.value); } });
   }
+}
+
+function renderRebuildGuide(){
+  const box = byId('rebuildStages');
+  const summary = byId('rebuildSummary');
+  if(!box || typeof DiagEngine === 'undefined' || !DiagEngine.engineRebuildGuide) return;
+  const guide = DiagEngine.engineRebuildGuide();
+  if(summary) summary.textContent = guide.summary || summary.textContent;
+  box.innerHTML = (guide.warnings && guide.warnings.length ? `<div class="notice">${guide.warnings.map((w) => esc(w)).join(' ')}</div>` : '') +
+    (guide.stages || []).map((stage, idx) => `
+    <details class="playbook"${idx === 0 ? ' open' : ''}>
+      <summary>${esc(stage.title)}</summary>
+      <ol class="checks diy-list">${(stage.steps || []).map((step) => `<li>${esc(step)}</li>`).join('')}</ol>
+    </details>
+  `).join('');
 }
 
 function renderAllSolutions(filter){
@@ -552,6 +582,7 @@ async function init(){
   }
   loadStats();
   renderAllSolutions();
+  renderRebuildGuide();
   document.querySelectorAll('details.extra').forEach((el) => {
     el.open = window.innerWidth >= 800;
   });

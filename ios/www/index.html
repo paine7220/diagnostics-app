@@ -16,13 +16,14 @@
   <div class="topbar">
     <button class="warn" id="btnRunDiagnosisTop">Run Diagnosis</button>
     <button id="btnLookupTop">Quick Lookup</button>
+    <button id="btnRebuildTop">Engine Rebuild</button>
     <button class="good" id="btnSaveCaseTop">Save</button>
     <button class="secondary" id="btnExportTop">Export</button>
   </div>
   <div class="wrap">
     <div class="hero">
       <h1>Auto/Truck Diagnostics for Dummies <span class="ver" id="appVersion">v1.2.0</span></h1>
-      <div class="sub">Type a trouble code. Get numbered DIY repair steps.</div>
+      <div class="sub">Type a trouble code, or open Engine Rebuild for pull / machine / assemble / break-in steps.</div>
       <div class="stats" id="dbStats"></div>
       <div class="acceptance"><input type="checkbox" id="acceptLegal"><div>I know this is an assistant, not a guaranteed repair.</div></div>
     </div>
@@ -43,6 +44,12 @@
         <label for="dbQuery">Or search a word</label>
         <input id="dbQuery" placeholder="thermostat">
         <div id="codeResults" class="cards mt-10"></div>
+      </section>
+
+      <section class="card" id="rebuildCard">
+        <h2>Engine rebuild</h2>
+        <div class="small" id="rebuildSummary">Prove it is a bottom-end or head job, then pull, measure, assemble, and break in. Torque comes from your engine’s service data.</div>
+        <div id="rebuildStages" class="mt-10"></div>
       </section>
 
       <section class="card" id="resultsCard">

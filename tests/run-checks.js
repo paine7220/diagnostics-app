@@ -35,12 +35,12 @@ check('index.html loads real script files', () => {
 
 check('button ids used by app.js exist in index.html', () => {
   const ids = [
-    'btnRunDiagnosisTop', 'btnLookupTop', 'btnSaveCaseTop', 'btnExportTop',
+    'btnRunDiagnosisTop', 'btnLookupTop', 'btnRebuildTop', 'btnSaveCaseTop', 'btnExportTop',
     'btnLookup', 'btnSearchDtc', 'btnClearCodes', 'btnRunDiagnosis',
     'btnSaveCase', 'btnLoadCase', 'btnClearCase', 'btnExport',
     'btnAudioRecord', 'btnAudioUpload', 'btnStartCamera', 'btnVideoUpload',
     'btnCaptureFrame', 'btnStopCamera', 'btnPhotoUpload', 'acceptLegal',
-    'codes', 'dbQuery', 'results', 'fluidOut', 'appVersion', 'solutionQuery', 'allSolutions'
+    'codes', 'dbQuery', 'results', 'fluidOut', 'appVersion', 'solutionQuery', 'allSolutions', 'rebuildCard', 'rebuildStages'
   ];
   for (const id of ids) {
     assert.ok(indexHtml.includes(`id="${id}"`), 'missing id ' + id);
@@ -167,10 +167,43 @@ check('SAE-aligned common codes have unique DIY', () => {
   assert.match(tps.detailed.diySteps.join(' '), /throttle/i);
 });
 
+check('engine rebuild guide is a full pull-assemble-break-in path', () => {
+  const sandbox = { module: { exports: {} }, window: {} };
+  vm.runInNewContext(dtcJs + '\n' + engineSrc + '\nmodule.exports = DiagEngine;', sandbox);
+  const engine = sandbox.module.exports;
+  assert.ok(typeof engine.engineRebuildGuide === 'function');
+  const guide = engine.engineRebuildGuide();
+  assert.ok(guide.stages && guide.stages.length >= 10, 'need full rebuild stages');
+  guide.stages.forEach((stage) => {
+    assert.ok(stage.title, stage.id);
+    assert.ok(stage.steps && stage.steps.length >= 4, stage.title);
+  });
+  const hay = guide.stages.map((s) => s.steps.join(' ')).join(' ');
+  assert.match(hay, /compression/i);
+  assert.match(hay, /machine/i);
+  assert.match(hay, /bearing/i);
+  assert.match(hay, /break-in/i);
+  assert.match(hay, /torque-to-yield|TTY/i);
+  const books = engine.listRepairPlaybooks();
+  assert.ok(books.some((row) => row.labels.some((label) => /Engine rebuild/i.test(label))));
+  const analysis = engine.buildAnalysis({
+    vehicle: { year: '2006', make: 'Chevy', model: 'Silverado', engine: '5.3' },
+    dtcs: [],
+    symptoms: ['Needs engine rebuild', 'Rod knock'],
+    notes: 'metal in oil',
+    fluid: { type: 'Engine oil', color: 'Metallic glitter' },
+    mediaSummary: {}
+  }, sandbox.window.DTC_DB_DATA);
+  assert.match(analysis.summary.primaryFinding, /rebuild/i);
+  assert.ok(analysis.rebuildGuide && analysis.rebuildGuide.stages.length >= 10);
+  assert.ok(analysis.diySteps.join(' ').toLowerCase().includes('compression'));
+});
+
 check('app.js talks to DiagEngine and DTC_DB_DATA', () => {
   assert.match(appSrc, /window\.DTC_DB_DATA/);
   assert.match(appSrc, /DiagEngine\.lookupCodes/);
   assert.match(appSrc, /DiagEngine\.buildAnalysis/);
+  assert.match(appSrc, /DiagEngine\.engineRebuildGuide/);
   assert.match(appSrc, /1\.2\.0/);
 });
 
