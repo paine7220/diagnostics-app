@@ -104,7 +104,7 @@ check('DiagEngine lookup and analysis for P0300', () => {
   const found = engine.lookupCodes(sandbox.window.DTC_DB_DATA, ['P0300'])[0];
   assert.strictEqual(found.description, 'Random/Multiple Cylinder Misfire Detected');
   assert.ok(found.detailed);
-  assert.match(found.detailed.title, /misfire/i);
+  assert.ok(found.detailed.diySteps && found.detailed.diySteps.length > 3);
   const analysis = engine.buildAnalysis({
     vehicle: { year: '2014', make: 'Chevy', model: 'Sierra' },
     dtcs: ['P0300'],

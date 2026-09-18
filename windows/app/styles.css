@@ -55,7 +55,9 @@ video,img,canvas{max-width:100%;border-radius:14px;border:1px solid #4a310e;back
 .result-block{margin:0 0 16px}
 .result-block h3{margin:0 0 8px;color:#ffd27b;font-size:1rem}
 .hypo{border:1px solid #4a310e;border-radius:12px;padding:10px;margin:0 0 8px;background:#101010}
-.warn-list{color:#ffb72f}
+.diy,.diy-list{color:#f6f1e8}
+.diy ol,.diy-list{padding-left:1.2rem}
+.diy li,.diy-list li{margin:0 0 10px;line-height:1.35}
 .doc-nav{margin:0 0 14px}
 .acceptance{display:flex;gap:8px;align-items:flex-start;background:#171204;border:1px solid #725000;border-radius:14px;padding:10px;margin-top:12px}
 .acceptance input{width:auto;margin-top:3px}

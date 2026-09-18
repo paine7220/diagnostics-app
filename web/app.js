@@ -109,11 +109,15 @@ function showEl(id){
 function renderLookupCards(items){
   if(!items.length){ html('codeResults','<div class="code-card">No matching codes.</div>'); showEl('codeResults'); return; }
   html('codeResults', items.map(item => {
+    const diy = (item.detailed && item.detailed.diySteps && item.detailed.diySteps.length)
+      ? `<div class="diy mt-10"><strong>DIY repair steps</strong><ol class="checks">${item.detailed.diySteps.map(step => `<li>${esc(step)}</li>`).join('')}</ol></div>`
+      : '';
     const guidance = item.detailed ? `
       <div class="small mt-8"><strong>${esc(item.detailed.title || 'Guidance')}</strong></div>
-      <div class="small mt-8"><strong>First checks:</strong> ${esc((item.detailed.firstChecks || []).join(' | '))}</div>
-      <div class="small mt-6"><strong>Likely parts:</strong> ${esc((item.detailed.likelyParts || []).join(' | '))}</div>
-    ` : '';
+      <div class="small mt-8"><strong>What to check first:</strong> ${esc((item.detailed.firstChecks || []).join(' | '))}</div>
+      <div class="small mt-6"><strong>Parts people actually replace:</strong> ${esc((item.detailed.likelyParts || []).join(' | '))}</div>
+      ${diy}
+    ` : diy;
     return `
       <div class="code-card">
         <div><span class="badge">${esc(item.code)}</span><span class="badge">${esc(item.family)}</span><span class="badge">${esc(item.subsystem)}</span></div>
@@ -216,6 +220,9 @@ function analysisToText(analysis){
     lines.push(`${i+1}. ${item.title} — ${item.confidence}%`);
     lines.push(`   Evidence: ${(item.reasons || []).join(' | ')}`);
   });
+  lines.push('');
+  lines.push(`DIY repair steps${analysis.diyTitle ? ' — ' + analysis.diyTitle : ''}`);
+  (analysis.diySteps || []).forEach((x, i) => lines.push(`${i+1}. ${x}`));
   lines.push('');
   lines.push('First checks');
   (analysis.firstChecks || []).forEach((x, i) => lines.push(`${i+1}. ${x}`));
@@ -437,7 +444,8 @@ function renderAnalysis(analysis){
     <div class="code-card">
       <div><span class="badge">${esc(card.code)}</span><span class="badge">${esc(card.family || '')}</span></div>
       <div><strong>${esc(card.description)}</strong></div>
-      ${card.guidance ? `<div class="small mt-8"><strong>${esc(card.guidance.title || 'Guidance')}</strong><br>First checks: ${esc((card.guidance.firstChecks || []).join(' | '))}</div>` : ''}
+      ${card.guidance ? `<div class="small mt-8"><strong>${esc(card.guidance.title || 'Guidance')}</strong></div>
+      ${card.guidance.diySteps && card.guidance.diySteps.length ? `<ol class="checks mt-8">${card.guidance.diySteps.map(step => `<li>${esc(step)}</li>`).join('')}</ol>` : `<div class="small mt-8">First checks: ${esc((card.guidance.firstChecks || []).join(' | '))}</div>`}` : ''}
     </div>
   `).join('');
   html('results', `
@@ -447,6 +455,7 @@ function renderAnalysis(analysis){
       <div class="small mt-6">${esc(analysis.summary.shortReason)}</div>
       <div class="small mt-6">${esc(vehicleLine)}</div>
     </div>
+    <div class="result-block"><h3>DIY repair steps${analysis.diyTitle ? ' — ' + esc(analysis.diyTitle) : ''}</h3><ol class="checks diy-list">${list(analysis.diySteps)}</ol></div>
     <div class="result-block"><h3>Top ranked causes</h3>${hypos}</div>
     <div class="result-block"><h3>First checks</h3><ol class="checks">${list(analysis.firstChecks)}</ol></div>
     <div class="result-block"><h3>Likely parts / paths</h3><ol class="checks">${list(analysis.likelyParts)}</ol></div>
