@@ -66,6 +66,10 @@ In Xcode:
 
 Camera and microphone permission strings are already set in `Info.plist`.
 
+## Optional web preview (Cloudflare)
+
+The canonical app in `web/` is already a static offline site. This repo includes `wrangler.jsonc` so the existing Cloudflare Workers Git integration (`noisy-pond-2dc8`) can publish those files as static assets. Core diagnosis still does not need the network.
+
 ## Checks
 
 ```

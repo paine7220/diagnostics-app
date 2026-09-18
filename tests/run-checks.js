@@ -130,6 +130,14 @@ check('no CDI Genius module', () => {
   assert.doesNotMatch(engineSrc, /cdi.?genius/i);
 });
 
+check('Cloudflare Workers static-asset config points at web/', () => {
+  const wrangler = fs.readFileSync(path.join(root, 'wrangler.jsonc'), 'utf8');
+  assert.match(wrangler, /"name": "noisy-pond-2dc8"/);
+  assert.match(wrangler, /"directory": "\.\/web"/);
+  const rootPkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.ok(rootPkg.scripts && rootPkg.scripts.build);
+});
+
 check('web and windows/app stay in lockstep for key files', () => {
   const names = ['index.html', 'app.js', 'diagnosticsEngine.js', 'styles.css'];
   for (const name of names) {
