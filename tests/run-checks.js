@@ -25,10 +25,13 @@ const engineSrc = fs.readFileSync(path.join(web, 'diagnosticsEngine.js'), 'utf8'
 const appSrc = fs.readFileSync(path.join(web, 'app.js'), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'windows', 'package.json'), 'utf8'));
 const dtcJs = fs.readFileSync(path.join(web, 'data', 'dtc-db.js'), 'utf8');
+const jobsJs = fs.readFileSync(path.join(web, 'data', 'common-jobs.js'), 'utf8');
 const dtcJson = JSON.parse(fs.readFileSync(path.join(web, 'data', 'dtc-db.json'), 'utf8'));
+const engineBundle = jobsJs + '\n' + dtcJs + '\n' + engineSrc + '\nmodule.exports = DiagEngine;';
 
 check('index.html loads real script files', () => {
   assert.match(indexHtml, /src="\.\/data\/dtc-db\.js"/);
+  assert.match(indexHtml, /src="\.\/data\/common-jobs\.js"/);
   assert.match(indexHtml, /src="\.\/diagnosticsEngine\.js"/);
   assert.match(indexHtml, /src="\.\/app\.js"/);
 });
@@ -98,7 +101,7 @@ check('dtc-db.js exports window.DTC_DB_DATA matching JSON', () => {
 
 check('DiagEngine lookup and analysis for P0300', () => {
   const sandbox = { module: { exports: {} }, window: {} };
-  vm.runInNewContext(dtcJs + '\n' + engineSrc + '\nmodule.exports = DiagEngine;', sandbox);
+  vm.runInNewContext(engineBundle, sandbox);
   const engine = sandbox.module.exports;
   assert.strictEqual(engine.APP_VERSION, '1.2.0');
   const found = engine.lookupCodes(sandbox.window.DTC_DB_DATA, ['P0300'])[0];
@@ -120,7 +123,7 @@ check('DiagEngine lookup and analysis for P0300', () => {
 
 check('every bundled DTC has DIY steps', () => {
   const sandbox = { module: { exports: {} }, window: {} };
-  vm.runInNewContext(dtcJs + '\n' + engineSrc + '\nmodule.exports = DiagEngine;', sandbox);
+  vm.runInNewContext(engineBundle, sandbox);
   const engine = sandbox.module.exports;
   const db = sandbox.window.DTC_DB_DATA;
   const found = engine.lookupCodes(db, db.map((row) => row.code));
@@ -132,7 +135,7 @@ check('every bundled DTC has DIY steps', () => {
 
 check('SAE-aligned common codes have unique DIY', () => {
   const sandbox = { module: { exports: {} }, window: {} };
-  vm.runInNewContext(dtcJs + '\n' + engineSrc + '\nmodule.exports = DiagEngine;', sandbox);
+  vm.runInNewContext(engineBundle, sandbox);
   const engine = sandbox.module.exports;
   const db = sandbox.window.DTC_DB_DATA;
   const byCode = Object.fromEntries(dtcJson.map((row) => [row.code, row]));
@@ -169,7 +172,7 @@ check('SAE-aligned common codes have unique DIY', () => {
 
 check('engine rebuild guide is a full pull-assemble-break-in path', () => {
   const sandbox = { module: { exports: {} }, window: {} };
-  vm.runInNewContext(dtcJs + '\n' + engineSrc + '\nmodule.exports = DiagEngine;', sandbox);
+  vm.runInNewContext(engineBundle, sandbox);
   const engine = sandbox.module.exports;
   assert.ok(typeof engine.engineRebuildGuide === 'function');
   const guide = engine.engineRebuildGuide();
@@ -201,7 +204,7 @@ check('engine rebuild guide is a full pull-assemble-break-in path', () => {
 
 check('common how-to jobs cover requested repairs', () => {
   const sandbox = { module: { exports: {} }, window: {} };
-  vm.runInNewContext(dtcJs + '\n' + engineSrc + '\nmodule.exports = DiagEngine;', sandbox);
+  vm.runInNewContext(engineBundle, sandbox);
   const engine = sandbox.module.exports;
   assert.ok(typeof engine.listCommonJobs === 'function');
   const jobs = engine.listCommonJobs();
@@ -215,7 +218,9 @@ check('common how-to jobs cover requested repairs', () => {
     assert.ok(ids.includes(id), 'missing job ' + id);
   });
   jobs.forEach((job) => {
-    assert.ok(job.steps && job.steps.length >= 5, job.id);
+    assert.ok(job.steps && job.steps.length >= 12, job.id + ' too short (' + ((job.steps || []).length) + ')');
+    assert.ok(job.tools && job.tools.length >= 3, job.id + ' missing tools');
+    assert.ok(job.warnings && job.warnings.length >= 2, job.id + ' missing warnings');
   });
   const hay = jobs.map((job) => job.title + ' ' + job.steps.join(' ')).join(' ');
   assert.match(hay, /starter/i);
@@ -271,7 +276,7 @@ check('Cloudflare Workers static-asset config points at web/', () => {
 });
 
 check('web and windows/app stay in lockstep for key files', () => {
-  const names = ['index.html', 'app.js', 'diagnosticsEngine.js', 'styles.css'];
+  const names = ['index.html', 'app.js', 'diagnosticsEngine.js', 'styles.css', 'data/common-jobs.js'];
   for (const name of names) {
     const a = fs.readFileSync(path.join(web, name), 'utf8');
     const b = fs.readFileSync(path.join(root, 'windows', 'app', name), 'utf8');

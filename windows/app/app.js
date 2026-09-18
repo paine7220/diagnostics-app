@@ -620,7 +620,11 @@ function renderCommonJobs(filter){
   box.innerHTML = jobs.map((job) => `
     <details class="playbook" id="job-${esc(job.id)}"${q ? ' open' : ''}>
       <summary>${esc(job.title)}</summary>
-      <ol class="checks diy-list">${(job.steps || []).map((step) => `<li>${esc(step)}</li>`).join('')}</ol>
+      ${job.time ? `<div class="small mt-8"><strong>Typical time:</strong> ${esc(job.time)}</div>` : ''}
+      ${job.tools && job.tools.length ? `<div class="small mt-8"><strong>Tools:</strong> ${esc(job.tools.join(', '))}</div>` : ''}
+      ${job.parts && job.parts.length ? `<div class="small mt-8"><strong>Parts:</strong> ${esc(job.parts.join(', '))}</div>` : ''}
+      ${job.warnings && job.warnings.length ? `<div class="notice mt-8">${job.warnings.map((w) => esc(w)).join(' ')}</div>` : ''}
+      <ol class="checks diy-list mt-8">${(job.steps || []).map((step) => `<li>${esc(step)}</li>`).join('')}</ol>
     </details>
   `).join('');
 }
