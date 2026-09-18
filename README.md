@@ -80,4 +80,4 @@ node tests/run-checks.js
 
 - Branding is **Dummies** everywhere (not Dummys).
 - Script tags in `web/index.html` load `./data/dtc-db.js` (`window.DTC_DB_DATA`), `./diagnosticsEngine.js` (`DiagEngine`), and `./app.js`.
-- 1.2.0 fixes the P0300 / P0301–P0312 misfire description shift and several other high-traffic wrong descriptions. See `CHANGELOG.md`.
+- 1.2.0 fixes the P0300 / P0301–P0312 misfire description shift and several other high-traffic wrong descriptions, and adds code-specific DIY for common SAE codes already in the database. See `CHANGELOG.md`.

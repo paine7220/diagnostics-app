@@ -40,7 +40,7 @@ check('button ids used by app.js exist in index.html', () => {
     'btnSaveCase', 'btnLoadCase', 'btnClearCase', 'btnExport',
     'btnAudioRecord', 'btnAudioUpload', 'btnStartCamera', 'btnVideoUpload',
     'btnCaptureFrame', 'btnStopCamera', 'btnPhotoUpload', 'acceptLegal',
-    'codes', 'dbQuery', 'results', 'fluidOut', 'appVersion'
+    'codes', 'dbQuery', 'results', 'fluidOut', 'appVersion', 'solutionQuery', 'allSolutions'
   ];
   for (const id of ids) {
     assert.ok(indexHtml.includes(`id="${id}"`), 'missing id ' + id);
@@ -127,7 +127,44 @@ check('every bundled DTC has DIY steps', () => {
   const missing = found.filter((row) => !row.detailed || !row.detailed.diySteps || !row.detailed.diySteps.length).map((row) => row.code);
   assert.strictEqual(found.length, db.length);
   assert.strictEqual(missing.length, 0, 'missing DIY for ' + missing.slice(0, 10).join(','));
-  assert.ok(engine.listRepairPlaybooks().length >= 1);
+  assert.ok(engine.listRepairPlaybooks().length >= 40);
+});
+
+check('SAE-aligned common codes have unique DIY', () => {
+  const sandbox = { module: { exports: {} }, window: {} };
+  vm.runInNewContext(dtcJs + '\n' + engineSrc + '\nmodule.exports = DiagEngine;', sandbox);
+  const engine = sandbox.module.exports;
+  const db = sandbox.window.DTC_DB_DATA;
+  const byCode = Object.fromEntries(dtcJson.map((row) => [row.code, row]));
+  const expected = {
+    P0101: 'Mass or Volume Air Flow Circuit Range/Performance',
+    P0442: 'Evaporative Emission System Leak Detected (small leak)',
+    P0440: 'Evaporative Emission System',
+    P0500: 'Vehicle Speed Sensor A',
+    P0011: 'Camshaft Position Timing Over-Advanced (Bank 1)',
+    P0087: 'Fuel Rail/System Pressure Too Low',
+    P0401: 'Exhaust Gas Recirculation Flow Insufficient Detected',
+    P2135: 'Throttle/Pedal Position Sensor/Switch A/B Voltage Correlation',
+    P0340: 'Camshaft Position Sensor A Circuit (Bank 1 or Single Sensor)',
+    P0562: 'System Voltage Low',
+    P0705: 'Transmission Range Sensor A Circuit (PRNDL Input)',
+    P2195: 'O2 Sensor Signal Biased/Stuck Lean (Bank 1 Sensor 1)'
+  };
+  for (const [code, description] of Object.entries(expected)) {
+    assert.ok(byCode[code], 'missing DB row ' + code);
+    assert.strictEqual(byCode[code].description, description, code);
+    const row = engine.lookupCodes(db, [code])[0];
+    assert.ok(row.detailed && row.detailed.diySteps && row.detailed.diySteps.length >= 4, code + ' DIY');
+    assert.notStrictEqual(row.detailed.title, row.description);
+  }
+  const maf = engine.lookupCodes(db, ['P0101'])[0];
+  assert.match(maf.detailed.diySteps.join(' '), /MAF/i);
+  const vss = engine.lookupCodes(db, ['P0500'])[0];
+  assert.match(vss.detailed.diySteps.join(' '), /speed/i);
+  const evap = engine.lookupCodes(db, ['P0442'])[0];
+  assert.match(evap.detailed.diySteps.join(' '), /gas cap/i);
+  const tps = engine.lookupCodes(db, ['P2135'])[0];
+  assert.match(tps.detailed.diySteps.join(' '), /throttle/i);
 });
 
 check('app.js talks to DiagEngine and DTC_DB_DATA', () => {

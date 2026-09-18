@@ -506,12 +506,26 @@ function bindEvents(){
     if(el) el.addEventListener('change', fluidData);
   });
   byId('dbQuery').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); searchLocalDb(); } });
+  const solutionQuery = byId('solutionQuery');
+  if(solutionQuery){
+    solutionQuery.addEventListener('input', () => renderAllSolutions(solutionQuery.value));
+    solutionQuery.addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); renderAllSolutions(solutionQuery.value); } });
+  }
 }
 
-function renderAllSolutions(){
+function renderAllSolutions(filter){
   const box = byId('allSolutions');
   if(!box || typeof DiagEngine === 'undefined' || !DiagEngine.listRepairPlaybooks) return;
-  const plans = DiagEngine.listRepairPlaybooks();
+  const q = String(filter != null ? filter : (byId('solutionQuery') && byId('solutionQuery').value) || '').trim().toLowerCase();
+  const plans = DiagEngine.listRepairPlaybooks().filter((plan) => {
+    if(!q) return true;
+    const hay = (plan.labels.join(' ') + ' ' + (plan.diySteps || []).join(' ')).toLowerCase();
+    return hay.includes(q);
+  });
+  if(!plans.length){
+    box.innerHTML = '<div class="small">No playbook matches that search. Try a code like P0442 or a word like MAF.</div>';
+    return;
+  }
   box.innerHTML = plans.map(plan => `
     <details class="playbook">
       <summary>${esc(plan.labels.join(', '))}</summary>
