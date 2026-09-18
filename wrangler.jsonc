@@ -1,0 +1,9 @@
+{
+  // Existing Cloudflare Workers Git integration is attached to this script name.
+  // Serves the canonical offline web app as static assets (no Worker script).
+  "name": "noisy-pond-2dc8",
+  "compatibility_date": "2026-09-18",
+  "assets": {
+    "directory": "./web"
+  }
+}

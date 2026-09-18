@@ -1,0 +1,12 @@
+.DS_Store
+*.log
+node_modules/
+windows/node_modules/
+ios/node_modules/
+windows/dist/
+windows/dist_electron/
+out/
+.idea/
+.vscode/
+*.iml
+Thumbs.db

@@ -1,0 +1,11 @@
+{
+  "name": "Auto/Truck Diagnostics for Dummies",
+  "short_name": "ATD Dummies",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#090909",
+  "theme_color": "#b8121b",
+  "icons": [
+    { "src": "./icon.png", "sizes": "1024x1024", "type": "image/png" }
+  ]
+}

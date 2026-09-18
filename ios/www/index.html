@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ATD Dummies">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'">
+  <title>Auto/Truck Diagnostics for Dummies</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.png">
+  <link rel="apple-touch-icon" href="./icon.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <button class="warn" id="btnRunDiagnosisTop">Run Diagnosis</button>
+    <button id="btnLookupTop">Quick Lookup</button>
+    <button id="btnRebuildTop">Engine Rebuild</button>
+    <button id="btnJobsTop">How-to Jobs</button>
+    <button class="good" id="btnSaveCaseTop">Save</button>
+    <button class="secondary" id="btnExportTop">Export</button>
+  </div>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Auto/Truck Diagnostics for Dummies <span class="ver" id="appVersion">v1.2.0</span></h1>
+      <div class="sub">Type a trouble code, open Engine Rebuild, or How-to Jobs for starters, brakes, oil, axles, and the rest.</div>
+      <div class="stats" id="dbStats"></div>
+      <div class="acceptance"><input type="checkbox" id="acceptLegal"><div>I know this is an assistant, not a guaranteed repair.</div></div>
+    </div>
+
+    <div class="stack mt-14">
+      <section class="card" id="lookupCard">
+        <h2>Code lookup</h2>
+        <label for="codes">Code (example P0300)</label>
+        <textarea id="codes" placeholder="P0300"></textarea>
+        <div class="row">
+          <button id="btnLookup">Quick Lookup</button>
+          <button class="warn" id="btnRunDiagnosis">Run Diagnosis</button>
+        </div>
+        <div class="row">
+          <button class="secondary" id="btnSearchDtc">Search</button>
+          <button class="secondary" id="btnClearCodes">Clear</button>
+        </div>
+        <label for="dbQuery">Or search a word</label>
+        <input id="dbQuery" placeholder="thermostat">
+        <div id="codeResults" class="cards mt-10"></div>
+      </section>
+
+      <section class="card" id="jobsCard">
+        <h2>How-to jobs</h2>
+        <div class="small">Full driveway procedures: tools, parts, warnings, and numbered steps. Torque and fluid type still come from this vehicle’s service data.</div>
+        <label for="jobQuery">Find a job</label>
+        <input id="jobQuery" placeholder="starter, brakes, oil, axle, stereo">
+        <div id="commonJobs" class="mt-10"></div>
+      </section>
+
+      <section class="card" id="rebuildCard">
+        <h2>Engine rebuild</h2>
+        <div class="small" id="rebuildSummary">Prove it is a bottom-end or head job, then pull, measure, assemble, and break in. Torque comes from your engine’s service data.</div>
+        <div class="symptoms mt-10" id="rebuildFlags">
+          <label><input type="checkbox" id="flagRodKnock"> <span>Rod knock</span></label>
+          <label><input type="checkbox" id="flagLowCompression"> <span>Low compression</span></label>
+          <label><input type="checkbox" id="flagBurnsOil"> <span>Burns oil</span></label>
+          <label><input type="checkbox" id="flagMetalInOil"> <span>Metal in the oil</span></label>
+          <label><input type="checkbox" id="flagNeedRebuild"> <span>I already know it needs a rebuild</span></label>
+        </div>
+        <div class="row mt-10">
+          <button class="warn" id="btnRebuildDiagnosis">Start rebuild diagnosis</button>
+        </div>
+        <div id="rebuildStages" class="mt-10"></div>
+      </section>
+
+      <section class="card" id="resultsCard">
+        <h2>Results</h2>
+        <div class="row">
+          <button class="secondary" id="btnSaveCase">Save Case</button>
+          <button class="secondary" id="btnLoadCase">Load Last</button>
+          <button class="secondary" id="btnClearCase">Clear Case</button>
+          <button class="secondary" id="btnExport">Export</button>
+        </div>
+        <div id="results" class="out rich mt-10">Nothing yet. Type a code above, then tap Quick Lookup for step-by-step DIY repair instructions.</div>
+      </section>
+
+      <section class="card" id="solutionsCard">
+        <h2>All repair solutions in this app</h2>
+        <div class="small">Code-specific driveway steps for common OBD-II problems, plus a fallback playbook for every other bundled code. These are not factory shop manuals.</div>
+        <label for="solutionQuery">Find a repair</label>
+        <input id="solutionQuery" placeholder="P0442, starter, brakes, rebuild">
+        <div id="allSolutions" class="mt-10"></div>
+      </section>
+
+      <details class="extra card">
+        <summary>Vehicle (optional)</summary>
+        <div class="grid g3">
+          <div><label for="year">Year</label><select id="year"></select></div>
+          <div><label for="make">Make</label><input id="make" placeholder="Chevy, Ford, Toyota, Harley"></div>
+          <div><label for="model">Model</label><input id="model" placeholder="Sierra, Ram, Explorer"></div>
+          <div><label for="engine">Engine</label><input id="engine" placeholder="5.3L V8"></div>
+          <div><label for="mileage">Mileage</label><input id="mileage" inputmode="numeric" placeholder="286583"></div>
+          <div><label for="trans">Transmission</label><select id="trans"><option value="">Select</option><option>Automatic</option><option>Manual</option><option>CVT</option><option>DCT</option><option>Unknown</option></select></div>
+          <div><label for="fuel">Fuel</label><select id="fuel"><option value="">Select</option><option>Gasoline</option><option>Diesel</option><option>Hybrid</option><option>Electric</option><option>Flex Fuel</option><option>Other</option></select></div>
+          <div><label for="nickname">Nickname</label><input id="nickname" placeholder="Work truck"></div>
+        </div>
+      </details>
+
+      <details class="extra card">
+        <summary>Symptoms (optional)</summary>
+        <div class="symptoms" id="symptoms"></div>
+        <label for="notes">Notes</label>
+        <textarea id="notes" placeholder="Stalls warm, fuel smell, battery light on."></textarea>
+      </details>
+
+      <details class="extra card">
+        <summary>Audio / camera / photo (optional)</summary>
+        <div class="grid g2">
+          <div>
+            <label>Audio</label>
+            <div class="row"><button id="btnAudioRecord">Start Audio Recording</button><button class="secondary" id="btnAudioUpload">Upload Audio</button></div>
+            <input type="file" id="audioFile" accept="audio/*" hidden>
+            <audio id="audioPreview" controls class="full-w mt-8"></audio>
+            <div class="small" id="audioSummary">No audio analyzed yet.</div>
+          </div>
+          <div>
+            <label>Video / Camera</label>
+            <div class="row"><button id="btnStartCamera">Start Camera</button><button class="secondary" id="btnVideoUpload">Upload Video</button></div>
+            <input type="file" id="videoFile" accept="video/*" hidden>
+            <div class="row mt-8"><button class="secondary" id="btnCaptureFrame">Capture Frame</button><button class="secondary" id="btnStopCamera">Stop Camera</button></div>
+            <video id="videoPreview" playsinline muted controls></video>
+            <canvas id="frameCanvas" hidden></canvas>
+            <img id="frameImage" hidden alt="Captured frame">
+            <div class="small" id="imageSummary">No frame/image analyzed yet.</div>
+          </div>
+        </div>
+        <label>Photo</label>
+        <div class="row"><button class="secondary" id="btnPhotoUpload">Upload Photo</button></div>
+        <input type="file" id="photoFile" accept="image/*" hidden>
+        <img id="photoPreview" hidden alt="Photo evidence" class="mt-8">
+      </details>
+
+      <details class="extra card">
+        <summary>Fluid assistant (optional)</summary>
+        <div class="grid g3">
+          <div><label for="fluidType">Fluid type</label><select id="fluidType"><option value="">Select</option><option>Engine oil</option><option>Transmission fluid</option><option>Coolant</option><option>Brake fluid</option><option>Power steering</option><option>Differential oil</option></select></div>
+          <div><label for="fluidLevel">Observed level</label><select id="fluidLevel"><option value="">Select</option><option>Below stick / dry</option><option>At or near add mark</option><option>Halfway between add and full</option><option>At full mark</option><option>Above full mark</option></select></div>
+          <div><label for="fluidColor">Fluid color</label><select id="fluidColor"><option value="">Select</option><option>Amber / honey</option><option>Dark brown</option><option>Black</option><option>Pink / red</option><option>Green</option><option>Orange</option><option>Milky</option><option>Metallic glitter</option></select></div>
+          <div><label for="fluidSmell">Smell</label><select id="fluidSmell"><option value="">Select</option><option>Normal</option><option>Burnt</option><option>Fuel smell</option><option>Sweet coolant smell</option></select></div>
+          <div><label for="fluidCapacity">Capacity known</label><input id="fluidCapacity" placeholder="6 quarts"></div>
+          <div><label for="fluidNotes">Notes</label><input id="fluidNotes" placeholder="Foamy, metallic, watery"></div>
+        </div>
+        <div class="out mt-10" id="fluidOut">Fluid guidance will show here.</div>
+      </details>
+
+      <details class="extra card">
+        <summary>Privacy / disclaimer / fees</summary>
+        <div class="row">
+          <a class="button ghost" href="./docs/privacy.html">Privacy Policy</a>
+          <a class="button ghost" href="./docs/disclaimer.html">Disclaimer</a>
+          <a class="button ghost" href="./docs/pricing.html">Fees / Pricing</a>
+        </div>
+      </details>
+    </div>
+
+    <div class="footer">Auto/Truck Diagnostics for Dummies <span id="footerVersion">v1.2.0</span></div>
+  </div>
+  <script src="./data/dtc-db.js"></script>
+  <script src="./data/common-jobs.js"></script>
+  <script src="./diagnosticsEngine.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
