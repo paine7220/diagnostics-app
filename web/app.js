@@ -101,8 +101,13 @@ function requireLegalAcceptance(){
   return true;
 }
 
+function showEl(id){
+  const node = byId(id);
+  if(node) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function renderLookupCards(items){
-  if(!items.length){ html('codeResults','<div class="code-card">No matching codes.</div>'); return; }
+  if(!items.length){ html('codeResults','<div class="code-card">No matching codes.</div>'); showEl('codeResults'); return; }
   html('codeResults', items.map(item => {
     const guidance = item.detailed ? `
       <div class="small mt-8"><strong>${esc(item.detailed.title || 'Guidance')}</strong></div>
@@ -117,6 +122,7 @@ function renderLookupCards(items){
       </div>
     `;
   }).join(''));
+  showEl('lookupCard');
 }
 
 function quickLookup(){
@@ -128,7 +134,7 @@ function quickLookup(){
 
 function searchLocalDb(){
   const q = value('dbQuery');
-  if(!q){ html('codeResults','<div class="code-card">Enter a code or keyword.</div>'); return; }
+  if(!q){ html('codeResults','<div class="code-card">Enter a code or keyword.</div>'); showEl('codeResults'); return; }
   const results = DiagEngine.searchDtc(state.dtcDb, q);
   renderLookupCards(results);
 }
@@ -174,7 +180,7 @@ function clearCase(){
   text('fluidOut', 'Fluid guidance will show here.');
   text('audioSummary', 'No audio analyzed yet.');
   text('imageSummary', 'No frame/image analyzed yet.');
-  html('results', 'Run a diagnosis to see ranked causes, first checks, likely parts, code cards, and warnings.');
+  html('results', 'Nothing yet. Type a code above, then tap Quick Lookup.');
   alert('Saved case cleared.');
 }
 
@@ -448,6 +454,7 @@ function renderAnalysis(analysis){
     ${cards ? `<div class="result-block"><h3>Code cards</h3><div class="cards">${cards}</div></div>` : ''}
     <div class="result-block"><h3>Disclaimers</h3><ol class="checks">${list(analysis.disclaimers)}</ol></div>
   `);
+  showEl('resultsCard');
 }
 
 function bindEvents(){
@@ -509,6 +516,9 @@ async function init(){
     return;
   }
   loadStats();
+  document.querySelectorAll('details.extra').forEach((el) => {
+    el.open = window.innerWidth >= 800;
+  });
 }
 
 init();

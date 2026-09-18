@@ -2,34 +2,62 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ATD Dummies">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'">
   <title>Auto/Truck Diagnostics for Dummies</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.png">
+  <link rel="apple-touch-icon" href="./icon.png">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <div class="topbar">
-    <button class="warn" id="btnRunDiagnosisTop">Run Full Diagnosis</button>
+    <button class="warn" id="btnRunDiagnosisTop">Run Diagnosis</button>
     <button id="btnLookupTop">Quick Lookup</button>
-    <button class="good" id="btnSaveCaseTop">Save Case</button>
-    <button class="secondary" id="btnExportTop">Export Report</button>
-    <a class="button ghost" href="./docs/privacy.html">Privacy</a>
-    <a class="button ghost" href="./docs/disclaimer.html">Disclaimer</a>
+    <button class="good" id="btnSaveCaseTop">Save</button>
+    <button class="secondary" id="btnExportTop">Export</button>
   </div>
   <div class="wrap">
     <div class="hero">
       <h1>Auto/Truck Diagnostics for Dummies <span class="ver" id="appVersion">v1.2.0</span></h1>
-      <div class="sub">A merged DTC database, real local diagnostic workflow, case storage, and media capture &mdash; runs fully offline on Windows and iPhone.</div>
-      <div class="notice">What this build honestly does: it gives you a real diagnostic workflow with local code lookup, weighted analysis, media-assisted clues, exportable reports, and privacy/disclaimer pages, all running on-device. What it does not do: magically pull live ECU data without compatible hardware.</div>
+      <div class="sub">Type a trouble code, tap Lookup. That is the app.</div>
       <div class="stats" id="dbStats"></div>
-      <div class="acceptance"><input type="checkbox" id="acceptLegal"><div><strong>Required before diagnosis:</strong> I understand this is an assistant, not a guaranteed repair verdict, and media cues are only supporting evidence.</div></div>
+      <div class="acceptance"><input type="checkbox" id="acceptLegal"><div>I know this is an assistant, not a guaranteed repair.</div></div>
     </div>
 
-    <div class="grid g2 mt-14">
-      <section class="card">
-        <h2>1) Vehicle</h2>
+    <div class="stack mt-14">
+      <section class="card" id="lookupCard">
+        <h2>Code lookup</h2>
+        <label for="codes">Code (example P0300)</label>
+        <textarea id="codes" placeholder="P0300"></textarea>
+        <div class="row">
+          <button id="btnLookup">Quick Lookup</button>
+          <button class="warn" id="btnRunDiagnosis">Run Diagnosis</button>
+        </div>
+        <div class="row">
+          <button class="secondary" id="btnSearchDtc">Search</button>
+          <button class="secondary" id="btnClearCodes">Clear</button>
+        </div>
+        <label for="dbQuery">Or search a word</label>
+        <input id="dbQuery" placeholder="thermostat">
+        <div id="codeResults" class="cards mt-10"></div>
+      </section>
+
+      <section class="card" id="resultsCard">
+        <h2>Results</h2>
+        <div class="row">
+          <button class="secondary" id="btnSaveCase">Save Case</button>
+          <button class="secondary" id="btnLoadCase">Load Last</button>
+          <button class="secondary" id="btnClearCase">Clear Case</button>
+          <button class="secondary" id="btnExport">Export</button>
+        </div>
+        <div id="results" class="out rich mt-10">Nothing yet. Type a code above, then tap Quick Lookup.</div>
+      </section>
+
+      <details class="extra card">
+        <summary>Vehicle (optional)</summary>
         <div class="grid g3">
           <div><label for="year">Year</label><select id="year"></select></div>
           <div><label for="make">Make</label><input id="make" placeholder="Chevy, Ford, Toyota, Harley"></div>
@@ -40,33 +68,17 @@
           <div><label for="fuel">Fuel</label><select id="fuel"><option value="">Select</option><option>Gasoline</option><option>Diesel</option><option>Hybrid</option><option>Electric</option><option>Flex Fuel</option><option>Other</option></select></div>
           <div><label for="nickname">Nickname</label><input id="nickname" placeholder="Work truck"></div>
         </div>
-      </section>
+      </details>
 
-      <section class="card">
-        <h2>2) Full DTC Database Lookup</h2>
-        <label for="codes">Paste one or more codes</label>
-        <textarea id="codes" placeholder="P0300
-P0171
-U0100"></textarea>
-        <div class="row">
-          <button id="btnLookup">Quick Lookup</button>
-          <button class="secondary" id="btnSearchDtc">Search Database</button>
-          <button class="secondary" id="btnClearCodes">Clear Codes</button>
-        </div>
-        <label for="dbQuery">Search term or code</label>
-        <input id="dbQuery" placeholder="P0128 or thermostat">
-        <div id="codeResults" class="cards mt-10"></div>
-      </section>
-
-      <section class="card">
-        <h2>3) Symptoms</h2>
+      <details class="extra card">
+        <summary>Symptoms (optional)</summary>
         <div class="symptoms" id="symptoms"></div>
         <label for="notes">Notes</label>
-        <textarea id="notes" placeholder="Cranks long cold, fuel smell, stalls warm, fan not kicking on, battery light on."></textarea>
-      </section>
+        <textarea id="notes" placeholder="Stalls warm, fuel smell, battery light on."></textarea>
+      </details>
 
-      <section class="card">
-        <h2>4) Media Diagnostics</h2>
+      <details class="extra card">
+        <summary>Audio / camera / photo (optional)</summary>
         <div class="grid g2">
           <div>
             <label>Audio</label>
@@ -90,10 +102,10 @@ U0100"></textarea>
         <div class="row"><button class="secondary" id="btnPhotoUpload">Upload Photo</button></div>
         <input type="file" id="photoFile" accept="image/*" hidden>
         <img id="photoPreview" hidden alt="Photo evidence" class="mt-8">
-      </section>
+      </details>
 
-      <section class="card">
-        <h2>5) Fluid Assistant</h2>
+      <details class="extra card">
+        <summary>Fluid assistant (optional)</summary>
         <div class="grid g3">
           <div><label for="fluidType">Fluid type</label><select id="fluidType"><option value="">Select</option><option>Engine oil</option><option>Transmission fluid</option><option>Coolant</option><option>Brake fluid</option><option>Power steering</option><option>Differential oil</option></select></div>
           <div><label for="fluidLevel">Observed level</label><select id="fluidLevel"><option value="">Select</option><option>Below stick / dry</option><option>At or near add mark</option><option>Halfway between add and full</option><option>At full mark</option><option>Above full mark</option></select></div>
@@ -103,32 +115,19 @@ U0100"></textarea>
           <div><label for="fluidNotes">Notes</label><input id="fluidNotes" placeholder="Foamy, metallic, watery"></div>
         </div>
         <div class="out mt-10" id="fluidOut">Fluid guidance will show here.</div>
-      </section>
+      </details>
 
-      <section class="card">
-        <h2>6) Results</h2>
-        <div class="row">
-          <button class="warn" id="btnRunDiagnosis">Run Full Diagnosis</button>
-          <button class="secondary" id="btnSaveCase">Save Case</button>
-          <button class="secondary" id="btnLoadCase">Load Last Case</button>
-          <button class="secondary" id="btnClearCase">Clear Saved Case</button>
-          <button class="secondary" id="btnExport">Export Report</button>
-        </div>
-        <div id="results" class="out rich mt-10">Run a diagnosis to see ranked causes, first checks, likely parts, code cards, and warnings.</div>
-      </section>
-
-      <section class="card">
-        <h2>7) Legal &amp; Fees</h2>
+      <details class="extra card">
+        <summary>Privacy / disclaimer / fees</summary>
         <div class="row">
           <a class="button ghost" href="./docs/privacy.html">Privacy Policy</a>
           <a class="button ghost" href="./docs/disclaimer.html">Disclaimer</a>
           <a class="button ghost" href="./docs/pricing.html">Fees / Pricing</a>
         </div>
-        <div class="small mt-10">This build runs entirely on-device: local DTC database, exportable case workflow, no server required. CDI Genius is not included.</div>
-      </section>
+      </details>
     </div>
 
-    <div class="footer">Auto/Truck Diagnostics for Dummies <span id="footerVersion">v1.2.0</span> &mdash; real local workflow, real exported reports, no fake buttons.</div>
+    <div class="footer">Auto/Truck Diagnostics for Dummies <span id="footerVersion">v1.2.0</span></div>
   </div>
   <script src="./data/dtc-db.js"></script>
   <script src="./diagnosticsEngine.js"></script>

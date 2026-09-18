@@ -64,4 +64,17 @@ video,img,canvas{max-width:100%;border-radius:14px;border:1px solid #4a310e;back
 .mt-10{margin-top:10px}
 .mt-14{margin-top:14px}
 .full-w{width:100%}
-@media (max-width:720px){.hero h1{font-size:1.5rem}}
+.stack{display:grid;gap:14px}
+details.extra{padding-top:8px}
+details.extra summary{font-weight:700;color:#ffd27b;cursor:pointer;padding:6px 0}
+details.extra[open] summary{margin-bottom:10px}
+@media (max-width:720px){
+  .hero h1{font-size:1.35rem}
+  .hero .sub{font-size:.95rem}
+  .topbar{padding:8px}
+  .topbar button,.topbar a.button{flex:1 1 45%}
+  .g2,.g3{grid-template-columns:1fr}
+  .wrap{padding:12px}
+  textarea{min-height:64px}
+  button,.button{padding:14px 12px;font-size:1.05rem}
+}
