@@ -40,14 +40,31 @@ check('button ids used by app.js exist in index.html', () => {
   const ids = [
     'btnRunDiagnosisTop', 'btnLookupTop', 'btnRebuildTop', 'btnJobsTop', 'btnSaveCaseTop', 'btnExportTop',
     'btnLookup', 'btnSearchDtc', 'btnClearCodes', 'btnRunDiagnosis', 'btnRebuildDiagnosis',
-    'btnSaveCase', 'btnLoadCase', 'btnClearCase', 'btnExport',
+    'btnSaveCase', 'btnLoadCase', 'btnClearCase', 'btnExport', 'btnComputerTop',
     'btnAudioRecord', 'btnAudioUpload', 'btnStartCamera', 'btnVideoUpload',
     'btnCaptureFrame', 'btnStopCamera', 'btnPhotoUpload', 'acceptLegal',
-    'codes', 'dbQuery', 'results', 'fluidOut', 'appVersion', 'solutionQuery', 'allSolutions', 'rebuildCard', 'rebuildStages', 'jobsCard', 'jobQuery', 'commonJobs'
+    'codes', 'dbQuery', 'results', 'fluidOut', 'appVersion', 'solutionQuery', 'allSolutions', 'rebuildCard', 'rebuildStages', 'jobsCard', 'jobQuery', 'commonJobs',
+    'computerCard', 'computerStatus'
   ];
   for (const id of ids) {
     assert.ok(indexHtml.includes(`id="${id}"`), 'missing id ' + id);
   }
+});
+
+check('computer transfer launchers and docs exist', () => {
+  assert.ok(fs.existsSync(path.join(root, 'GET_ON_COMPUTER.bat')));
+  assert.ok(fs.existsSync(path.join(root, 'GET_ON_COMPUTER.sh')));
+  assert.ok(fs.existsSync(path.join(web, 'OPEN_ON_COMPUTER.bat')));
+  assert.ok(fs.existsSync(path.join(web, 'OPEN_ON_THIS_COMPUTER.txt')));
+  const computerDoc = fs.readFileSync(path.join(web, 'docs', 'computer.html'), 'utf8');
+  assert.match(computerDoc, /GET_ON_COMPUTER\.bat/);
+  assert.match(computerDoc, /START_APP_FOR_TESTING\.bat/);
+  assert.match(computerDoc, /BUILD_WINDOWS_INSTALLER\.bat/);
+  assert.match(indexHtml, /id="computerCard"/);
+  assert.match(indexHtml, /docs\/computer\.html/);
+  assert.match(appSrc, /btnComputerTop/);
+  assert.ok(fs.existsSync(path.join(root, 'tools', 'pack-computer-copy.py')));
+  assert.ok(fs.existsSync(path.join(root, '.github', 'workflows', 'computer-copy.yml')));
 });
 
 check('windows package is 1.2.0 with Trusted Signing intact', () => {
@@ -276,7 +293,7 @@ check('Cloudflare Workers static-asset config points at web/', () => {
 });
 
 check('web and windows/app stay in lockstep for key files', () => {
-  const names = ['index.html', 'app.js', 'diagnosticsEngine.js', 'styles.css', 'data/common-jobs.js'];
+  const names = ['index.html', 'app.js', 'diagnosticsEngine.js', 'styles.css', 'data/common-jobs.js', 'docs/computer.html'];
   for (const name of names) {
     const a = fs.readFileSync(path.join(web, name), 'utf8');
     const b = fs.readFileSync(path.join(root, 'windows', 'app', name), 'utf8');

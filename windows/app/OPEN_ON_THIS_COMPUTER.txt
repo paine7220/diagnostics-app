@@ -1,0 +1,22 @@
+Auto/Truck Diagnostics for Dummies — computer copy
+==================================================
+
+This folder is the full offline app.
+
+Windows
+  Double-click OPEN_ON_COMPUTER.bat
+  or double-click index.html
+
+Mac or Linux
+  Double-click index.html
+  or drag index.html onto Chrome or Edge
+
+You do not need the internet after this folder is on the computer.
+Use Chrome or Edge. The app looks up codes and how-to jobs on this machine.
+
+If you downloaded the whole GitHub project instead of this folder:
+  Windows: double-click GET_ON_COMPUTER.bat in the project root
+  Then, for a desktop window: windows\START_APP_FOR_TESTING.bat
+  Then, for a Setup EXE: windows\BUILD_WINDOWS_INSTALLER.bat
+
+More steps: open docs\computer.html

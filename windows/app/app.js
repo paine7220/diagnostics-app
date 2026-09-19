@@ -540,6 +540,8 @@ function bindEvents(){
   if(rebuildBtn) rebuildBtn.onclick = () => { renderRebuildGuide(); showEl('rebuildCard'); };
   const jobsBtn = byId('btnJobsTop');
   if(jobsBtn) jobsBtn.onclick = () => { renderCommonJobs(); showEl('jobsCard'); };
+  const computerBtn = byId('btnComputerTop');
+  if(computerBtn) computerBtn.onclick = () => showEl('computerCard');
   const rebuildDiag = byId('btnRebuildDiagnosis');
   if(rebuildDiag) rebuildDiag.onclick = startRebuildDiagnosis;
   byId('btnSaveCase').onclick = saveCase;
@@ -682,6 +684,10 @@ async function init(){
     return;
   }
   loadStats();
+  if(window.ATD_DESKTOP){
+    const status = byId('computerStatus');
+    if(status) status.textContent = 'This is already the computer copy. Same codes, rebuild path, and how-to jobs as the phone page.';
+  }
   renderAllSolutions();
   renderRebuildGuide();
   renderCommonJobs();
