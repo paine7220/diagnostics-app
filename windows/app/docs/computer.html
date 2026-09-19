@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Use on a computer — Auto/Truck Diagnostics for Dummies</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <p class="doc-nav"><a class="button ghost" href="../index.html">Back to app</a></p>
+    <div class="hero">
+      <h1>Use this app on a computer</h1>
+      <div class="sub">Same codes, rebuild path, and how-to jobs. No phone required after the copy is on the PC.</div>
+    </div>
+
+    <div class="card">
+      <h2>1. Fastest — open it in the computer’s browser</h2>
+      <ol class="checks diy-list">
+        <li>Sit at the computer. Open Chrome or Microsoft Edge.</li>
+        <li>Go to the GitHub project: <a href="https://github.com/paine7220/diagnostics-app">https://github.com/paine7220/diagnostics-app</a></li>
+        <li>Or paste this page if you already have it working on the phone. Bookmark it on the computer.</li>
+        <li>This is the same app. Type a code or open How-to Jobs. It does not need a scan tool.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>2. Offline folder — keep a copy on the hard drive</h2>
+      <ol class="checks diy-list">
+        <li>On the computer, open <a href="https://github.com/paine7220/diagnostics-app">https://github.com/paine7220/diagnostics-app</a></li>
+        <li>Click the green <strong>Code</strong> button, then <strong>Download ZIP</strong>.</li>
+        <li>If you are on this transfer branch, this ZIP is the same copy: <a href="https://github.com/paine7220/diagnostics-app/archive/refs/heads/cursor/transfer-to-computer-2091.zip">download the computer-transfer branch ZIP</a>.</li>
+        <li>Unzip the folder. You should see <code>GET_ON_COMPUTER.bat</code> next to a <code>web</code> folder.</li>
+        <li>Windows: double-click <code>GET_ON_COMPUTER.bat</code>. The app opens in your browser.</li>
+        <li>Any computer: open the <code>web</code> folder and double-click <code>index.html</code> (or <code>OPEN_ON_COMPUTER.bat</code> on Windows).</li>
+        <li>You can copy that <code>web</code> folder to a USB stick and open it on another PC the same way.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>3. Windows desktop app</h2>
+      <ol class="checks diy-list">
+        <li>Install Node.js LTS from <a href="https://nodejs.org">https://nodejs.org</a> if it is not already installed. Reboot if the installer asks.</li>
+        <li>From the unzipped project, double-click <code>windows\START_APP_FOR_TESTING.bat</code>. The first run installs Electron, then a desktop window opens.</li>
+        <li>For a one-click Setup EXE and a Portable EXE, double-click <code>windows\BUILD_WINDOWS_INSTALLER.bat</code>. Output lands in <code>windows\dist\</code>.</li>
+        <li>Azure Trusted Signing stays in <code>windows\package.json</code>. Without Azure credentials the bat file builds an unsigned installer you can still run locally.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>4. Download the packed computer copy from GitHub Actions</h2>
+      <ol class="checks diy-list">
+        <li>On the computer, open the repo → <strong>Actions</strong> → workflow <strong>Computer copy</strong>.</li>
+        <li>Open the latest green run.</li>
+        <li>Download <strong>ATDD-computer-copy-1.2.0</strong>. Unzip it. Double-click <code>OPEN_ON_COMPUTER.bat</code> or <code>index.html</code>.</li>
+        <li>If the Windows installer job finished, also download <strong>ATDD-windows-1.2.0</strong> for the Setup EXE and Portable EXE.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>What transfers</h2>
+      <p>Code lookup, every bundled DTC playbook, engine rebuild stages, and the how-to jobs (starter through 4WD axles). Saved cases stay on that computer. This is not live OBD and not a factory shop manual.</p>
+    </div>
+  </div>
+</body>
+</html>

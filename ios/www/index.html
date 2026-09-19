@@ -20,16 +20,30 @@
     <button id="btnJobsTop">How-to Jobs</button>
     <button class="good" id="btnSaveCaseTop">Save</button>
     <button class="secondary" id="btnExportTop">Export</button>
+    <button class="secondary" id="btnComputerTop">Use on computer</button>
   </div>
   <div class="wrap">
     <div class="hero">
       <h1>Auto/Truck Diagnostics for Dummies <span class="ver" id="appVersion">v1.2.0</span></h1>
-      <div class="sub">Type a trouble code, open Engine Rebuild, or How-to Jobs for starters, brakes, oil, axles, and the rest.</div>
+      <div class="sub">Type a trouble code, open Engine Rebuild, or How-to Jobs. The same app also runs on a computer.</div>
       <div class="stats" id="dbStats"></div>
       <div class="acceptance"><input type="checkbox" id="acceptLegal"><div>I know this is an assistant, not a guaranteed repair.</div></div>
     </div>
 
     <div class="stack mt-14">
+      <section class="card" id="computerCard">
+        <h2>Use on a computer</h2>
+        <div class="small" id="computerStatus">The same app runs on a PC. You do not need this phone after you copy it over.</div>
+        <ol class="checks diy-list mt-10">
+          <li><strong>Fastest:</strong> on the computer, open Chrome or Edge and go to the same page you are reading now. Bookmark it.</li>
+          <li><strong>Offline folder:</strong> on the computer open GitHub → Code → Download ZIP. Unzip it. Double-click <code>GET_ON_COMPUTER.bat</code> (Windows) or <code>web/index.html</code> (any computer).</li>
+          <li><strong>Windows app window:</strong> after the unzip, install Node.js LTS, then double-click <code>windows\START_APP_FOR_TESTING.bat</code>. For a Setup EXE, use <code>windows\BUILD_WINDOWS_INSTALLER.bat</code>.</li>
+        </ol>
+        <div class="row mt-10">
+          <a class="button" href="./docs/computer.html">Full computer steps</a>
+        </div>
+      </section>
+
       <section class="card" id="lookupCard">
         <h2>Code lookup</h2>
         <label for="codes">Code (example P0300)</label>
@@ -157,6 +171,7 @@
           <a class="button ghost" href="./docs/privacy.html">Privacy Policy</a>
           <a class="button ghost" href="./docs/disclaimer.html">Disclaimer</a>
           <a class="button ghost" href="./docs/pricing.html">Fees / Pricing</a>
+          <a class="button ghost" href="./docs/computer.html">Use on a computer</a>
         </div>
       </details>
     </div>
