@@ -3,7 +3,9 @@
   "private": true,
   "description": "Offline Auto/Truck Diagnostics for Dummies — static web app plus Windows/iOS wrappers",
   "scripts": {
-    "test": "node tests/run-checks.js",
+    "test": "node tests/run-checks.js && node kathy-health/tests/run-checks.js",
+    "test:atdd": "node tests/run-checks.js",
+    "test:kathy": "node kathy-health/tests/run-checks.js",
     "build": "node -e \"console.log('Static web/ app; no compile step.')\""
   }
 }
