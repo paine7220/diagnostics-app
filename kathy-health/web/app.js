@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'kathy_health_v1';
-  const VERSION = '1.5.0';
+  const VERSION = '1.5.1';
 
   const defaultState = () => ({
     version: VERSION,
@@ -24,7 +24,7 @@
       unit: 'mg/dL'
     },
     cgm: {
-      mode: 'off', // off | nightscout | dexcom_share
+      mode: 'dexcom_share', // off | nightscout | dexcom_share
       nightscoutUrl: '',
       nightscoutSecret: '',
       accountName: '',
@@ -159,6 +159,7 @@
   function startCgmTimer() {
     clearCgmTimer();
     if (!state.onboarded || !state.cgm || state.cgm.mode === 'off') return;
+    if (state.cgm.mode === 'dexcom_share' && !(state.cgm.accountName && state.cgm.password)) return;
     const seconds = Math.max(30, Number(state.cgm.pollSeconds || 60));
     cgmTick = setInterval(() => {
       refreshCgm(false);
@@ -483,17 +484,33 @@
 
       <section class="section sugar-panel">
         <div class="section-head"><h3>Blood sugar</h3></div>
-        ${!(state.cgm && state.cgm.mode !== 'off') ? `
+        ${!(state.cgm && state.cgm.accountName && state.cgm.password) ? `
           <article class="item">
-            <p class="item-title">Connect Dexcom on this iPhone</p>
-            <p class="item-meta">Open Settings → Dexcom / CGM → choose Dexcom Share, enter the Dexcom app account, then Test CGM now.</p>
+            <p class="item-title">Connect Dexcom now</p>
+            <p class="item-meta">Share must be On in the Dexcom app. Enter the same Dexcom account used on this iPhone, then tap Connect.</p>
+            <div class="field">
+              <label for="quickCgmAccount">Dexcom username</label>
+              <input id="quickCgmAccount" value="${esc(state.cgm.accountName || '')}" autocomplete="username" autocapitalize="none" spellcheck="false">
+            </div>
+            <div class="field">
+              <label for="quickCgmPassword">Dexcom password</label>
+              <input id="quickCgmPassword" type="password" value="${esc(state.cgm.password || '')}" autocomplete="current-password">
+            </div>
+            <div class="field">
+              <label for="quickCgmRegion">Region</label>
+              <select id="quickCgmRegion">
+                <option value="us" ${state.cgm.region !== 'ous' ? 'selected' : ''}>United States</option>
+                <option value="ous" ${state.cgm.region === 'ous' ? 'selected' : ''}>Outside US</option>
+              </select>
+            </div>
             <div class="item-actions">
-              <button type="button" data-route-link="settings">Open Dexcom settings</button>
+              <button type="button" id="btnQuickConnectCgm">Connect Dexcom</button>
               <a class="button secondary" href="dexcom://">Open Dexcom app</a>
             </div>
+            ${state.cgm.lastError ? '<p class="item-meta"><span class="badge warn">' + esc(state.cgm.lastError) + '</span></p>' : ''}
           </article>` : ''}
         <p class="item-meta">Low alert at ${esc(String(state.alertSettings.lowSugarThreshold))} ${esc(state.alertSettings.unit || 'mg/dL')}. If there is no OK within ${esc(String(state.alertSettings.responseSeconds))} seconds, family is alerted automatically.</p>
-        ${state.cgm && state.cgm.mode !== 'off' ? `
+        ${state.cgm && state.cgm.accountName && state.cgm.password ? `
           <article class="item" style="margin-top:10px">
             <p class="item-title">
               ${state.cgm.lastReading
@@ -508,7 +525,7 @@
           </article>` : ''}
         <div class="item-actions" style="margin-top:10px">
           <button type="button" data-open="sugar">Log sugar</button>
-          ${state.cgm && state.cgm.mode !== 'off' ? '<button type="button" class="secondary" id="btnRefreshCgm">Refresh CGM</button>' : ''}
+          ${state.cgm && state.cgm.accountName && state.cgm.password ? '<button type="button" class="secondary" id="btnRefreshCgm">Refresh CGM</button>' : ''}
           <button type="button" class="warn" id="btnHelpNow">I need help</button>
         </div>
         <p class="item-meta" style="margin-top:10px">
@@ -517,7 +534,7 @@
             if (state.cgm && state.cgm.lastReading) {
               return 'Latest CGM: ' + esc(String(state.cgm.lastReading.mgdl)) + ' mg/dL';
             }
-            return sugarVital ? ('Latest sugar: ' + esc(sugarVital.value) + (sugarVital.unit ? ' ' + esc(sugarVital.unit) : '')) : 'No sugar reading yet — connect Dexcom in Settings or log manually.';
+            return sugarVital ? ('Latest sugar: ' + esc(sugarVital.value) + (sugarVital.unit ? ' ' + esc(sugarVital.unit) : '')) : 'No sugar reading yet — connect Dexcom above or log manually.';
           })()}
         </p>
       </section>
@@ -828,11 +845,11 @@
           <p class="item-title">iPhone setup (Michael’s phone test)</p>
           <p class="item-meta">
             1. Open the <strong>Dexcom</strong> app → Share → turn Sharing <strong>On</strong> (invite a follower if needed — you can invite yourself).<br>
-            2. Use the <strong>same Dexcom account</strong> username/password below.<br>
-            3. Tap <strong>Save CGM</strong>, then <strong>Test CGM now</strong> — a live reading should appear on Today.
+            2. On <strong>Today</strong>, enter the same Dexcom username/password and tap <strong>Connect Dexcom</strong>.
           </p>
           <div class="item-actions">
             <a class="button secondary" href="dexcom://">Open Dexcom app</a>
+            <button type="button" class="secondary" data-route-link="today">Back to Today</button>
           </div>
         </article>
         <div class="field">
@@ -1188,6 +1205,30 @@
     }
     const refreshCgmBtn = document.getElementById('btnRefreshCgm');
     if (refreshCgmBtn) refreshCgmBtn.addEventListener('click', () => refreshCgm(true));
+    const quickConnect = document.getElementById('btnQuickConnectCgm');
+    if (quickConnect) {
+      quickConnect.addEventListener('click', () => {
+        const account = (document.getElementById('quickCgmAccount') || {}).value || '';
+        const password = (document.getElementById('quickCgmPassword') || {}).value || '';
+        const region = (document.getElementById('quickCgmRegion') || {}).value || 'us';
+        state.cgm.mode = 'dexcom_share';
+        state.cgm.accountName = String(account).trim();
+        state.cgm.password = String(password);
+        state.cgm.region = region === 'ous' ? 'ous' : 'us';
+        state.cgm.lastError = '';
+        if (!state.alertSettings.webhookUrl && typeof location !== 'undefined') {
+          state.alertSettings.webhookUrl = location.origin + '/alert';
+        }
+        if (!state.cgm.accountName || !state.cgm.password) {
+          toast('Enter Dexcom username and password');
+          return;
+        }
+        save();
+        startCgmTimer();
+        toast('Connecting Dexcom…');
+        refreshCgm(true);
+      });
+    }
     const refreshPumpBtn = document.getElementById('btnRefreshPump');
     if (refreshPumpBtn) refreshPumpBtn.addEventListener('click', () => refreshPump(true));
     const saveCgm = document.getElementById('btnSaveCgm');

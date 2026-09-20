@@ -85,7 +85,11 @@ async function fetchDexcomShareLatest(accountName, password, region) {
     try { sessionId = JSON.parse(sessionRaw); } catch (e) { /* keep string */ }
   }
   sessionId = String(sessionId || '').replace(/^"|"$/g, '');
-  if (!sessionId || /AccountPassword|Invalid|null/i.test(sessionId)) {
+  if (
+    !sessionId ||
+    /^0{8}-0{4}-0{4}-0{4}-0{12}$/i.test(sessionId) ||
+    /AccountPassword|Invalid|null/i.test(sessionId)
+  ) {
     throw new Error('Dexcom Share login rejected — check username, password, region, and that Share is enabled in the Dexcom app');
   }
   const glucoseUrl = base + '/Publisher/ReadPublisherLatestGlucoseValues?sessionId=' +
@@ -162,7 +166,8 @@ const server = http.createServer(async (req, res) => {
         const reading = await fetchDexcomShareLatest(accountName, password, region);
         return send(res, 200, { ok: true, source: 'dexcom_share', region, reading });
       } catch (err) {
-        return send(res, 502, { ok: false, error: String(err && err.message || err) });
+        // Use 200 so Cloudflare quick tunnels do not replace the JSON body with a 502 HTML page
+        return send(res, 200, { ok: false, error: String(err && err.message || err) });
       }
     }
 

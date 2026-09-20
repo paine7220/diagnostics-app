@@ -168,7 +168,8 @@ async function handleDexcomLatest(request) {
     const reading = await fetchDexcomShareLatest(accountName, password, region);
     return json({ ok: true, source: 'dexcom_share', region, reading });
   } catch (err) {
-    return json({ ok: false, error: String(err && err.message || err) }, 502);
+    // Prefer 200 so intermediaries (quick tunnels) do not replace the body
+    return json({ ok: false, error: String(err && err.message || err) }, 200);
   }
 }
 
@@ -202,7 +203,11 @@ async function fetchDexcomShareLatest(accountName, password, region) {
     sessionId = JSON.parse(sessionRaw);
   } catch (e) { /* plain string session */ }
   sessionId = String(sessionId || '').replace(/^"|"$/g, '');
-  if (!sessionId || /AccountPassword|Invalid|null/i.test(sessionId)) {
+  if (
+    !sessionId ||
+    /^0{8}-0{4}-0{4}-0{4}-0{12}$/i.test(sessionId) ||
+    /AccountPassword|Invalid|null/i.test(sessionId)
+  ) {
     throw new Error('Dexcom Share login rejected — check username, password, and region');
   }
 

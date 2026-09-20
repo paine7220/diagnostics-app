@@ -2,19 +2,21 @@
 
 ## Tap-ready (Safari)
 
-Open this link on the iPhone in **Safari**:
-
-**https://guitars-nothing-saskatchewan-yang.trycloudflare.com/**
+**https://fallen-memorial-liable-armor.trycloudflare.com/**
 
 1. Tap **Share** → **Add to Home Screen** → **Add**
-2. Open **Kathy’s Health** from the home screen
-3. **Settings** → add family phone numbers + alert webhook for low-sugar texts
+2. Connect Dexcom (below)
+3. Add family phones in Settings for low-sugar alerts
 
-This link stays up while the cloud agent is running. For a permanent URL after merge, host `kathy-health/web/` on Cloudflare or GitHub Pages (or use `/kathy/` on the main Workers site once published).
+## Connect Dexcom app on this iPhone
+
+1. Open **Dexcom** → **Share** → Sharing **On**
+2. On **Today**, enter the same Dexcom username/password → **Connect Dexcom**
+3. Live sugar should appear; lows start the family check-in
+
+Full checklist: `DEXCOM_IPHONE_TEST.md`
 
 ## Optional App Store / Xcode shell
-
-On a Mac with Xcode and an Apple Developer account:
 
 ```bash
 cd kathy-health/ios
