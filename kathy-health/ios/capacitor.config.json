@@ -1,0 +1,11 @@
+{
+  "appId": "com.michaelpaine.kathyhealth",
+  "appName": "Kathy's Health",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic"
+  }
+}

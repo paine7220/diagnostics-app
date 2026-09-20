@@ -2,6 +2,8 @@
 
 Offline diagnostic assistant for Michael Paine. One canonical web app, two platform wrappers.
 
+> **Kathy’s Health** (separate project in this repo): see [`kathy-health/`](./kathy-health/) — medications, sugar checks, and **automatic family alerts** when sugar is low and she does not respond.
+
 ```
 web/          canonical app (edit this)
 windows/      Electron + electron-builder wrapper
