@@ -66,7 +66,7 @@
     el.textContent = msg;
     el.hidden = false;
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => { el.hidden = true; }, 2600);
+    toast._t = setTimeout(() => { el.hidden = true; }, 2200);
   }
 
   function esc(s) {
