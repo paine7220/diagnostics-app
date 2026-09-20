@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'kathy_health_v1';
-  const VERSION = '1.3.0';
+  const VERSION = '1.4.0';
 
   const defaultState = () => ({
     version: VERSION,
@@ -35,6 +35,19 @@
       lastError: '',
       lastFetchAt: null
     },
+    pump: {
+      mode: 'off', // off | nightscout | manual
+      brand: 'unknown', // omnipod | tandem | medtronic | loop | unknown
+      nightscoutUrl: '',
+      nightscoutSecret: '',
+      reuseCgmNightscout: true,
+      lastStatus: null,
+      lastBolus: null,
+      treatments: [],
+      manualEvents: [],
+      lastError: '',
+      lastFetchAt: null
+    },
     activeAlert: null,
     alertLog: []
   });
@@ -54,6 +67,7 @@
       const merged = Object.assign(base, parsed);
       merged.alertSettings = Object.assign(base.alertSettings, parsed.alertSettings || {});
       merged.cgm = Object.assign(base.cgm, parsed.cgm || {});
+      merged.pump = Object.assign(base.pump, parsed.pump || {});
       return merged;
     } catch (e) {
       return defaultState();
@@ -137,7 +151,10 @@
     clearCgmTimer();
     if (!state.onboarded || !state.cgm || state.cgm.mode === 'off') return;
     const seconds = Math.max(30, Number(state.cgm.pollSeconds || 60));
-    cgmTick = setInterval(() => { refreshCgm(false); }, seconds * 1000);
+    cgmTick = setInterval(() => {
+      refreshCgm(false);
+      refreshPump(false);
+    }, seconds * 1000);
   }
 
   function recordCgmVital(reading) {
@@ -175,11 +192,16 @@
       state.cgm.lastFetchAt = new Date().toISOString();
       save();
       if (manual) toast('CGM updated: ' + reading.mgdl + ' mg/dL');
+      const pumpSuspended = state.pump && state.pump.lastStatus && state.pump.lastStatus.suspended;
       if (
         KathyAlerts.isLowSugar(reading.mgdl, state.alertSettings.lowSugarThreshold) &&
         !(state.activeAlert && state.activeAlert.status === 'waiting')
       ) {
         beginLowSugarAlert(reading.mgdl, 'mg/dL');
+        if (pumpSuspended && state.activeAlert) {
+          state.activeAlert.pumpSuspended = true;
+          save();
+        }
       } else {
         render();
       }
@@ -188,6 +210,35 @@
       state.cgm.lastFetchAt = new Date().toISOString();
       save();
       if (manual) toast(state.cgm.lastError);
+      else render();
+    }
+  }
+
+  function pumpNightscoutConfig() {
+    if (state.pump.reuseCgmNightscout && state.cgm.nightscoutUrl) {
+      return { url: state.cgm.nightscoutUrl, secret: state.cgm.nightscoutSecret };
+    }
+    return { url: state.pump.nightscoutUrl, secret: state.pump.nightscoutSecret };
+  }
+
+  async function refreshPump(manual) {
+    if (!state.pump || state.pump.mode !== 'nightscout') return;
+    try {
+      const cfg = pumpNightscoutConfig();
+      const data = await KathyPump.fetchNightscoutPump(cfg.url, cfg.secret);
+      state.pump.lastStatus = data.status;
+      state.pump.lastBolus = data.lastBolus;
+      state.pump.treatments = data.treatments || [];
+      state.pump.lastError = '';
+      state.pump.lastFetchAt = data.fetchedAt;
+      save();
+      if (manual) toast(data.status && data.status.iob != null ? ('Pump IOB ' + data.status.iob + ' U') : 'Pump data updated');
+      render();
+    } catch (err) {
+      state.pump.lastError = String(err && err.message || err);
+      state.pump.lastFetchAt = new Date().toISOString();
+      save();
+      if (manual) toast(state.pump.lastError);
       else render();
     }
   }
@@ -308,7 +359,7 @@
           <p class="alert-kicker">${waiting ? 'Check in needed' : 'Family alerted'}</p>
           <h2>Blood sugar ${esc(state.activeAlert.sugarValue)} ${esc(state.activeAlert.unit || '')}</h2>
           ${waiting ? `
-            <p class="lede">If you do not confirm you are OK, family is alerted automatically (no tap required).</p>
+            <p class="lede">If you do not confirm you are OK, family is alerted automatically (no tap required).${state.activeAlert.pumpSuspended ? ' Pump reports suspended.' : ''}</p>
             <p class="alert-countdown">${left}s</p>
             <div class="item-actions" style="flex-direction:column">
               <button type="button" class="ok" id="btnImOk">I’m OK — cancel alert</button>
@@ -451,6 +502,31 @@
             return sugarVital ? ('Latest sugar: ' + esc(sugarVital.value) + (sugarVital.unit ? ' ' + esc(sugarVital.unit) : '')) : 'No sugar reading yet — connect Dexcom in Settings or log manually.';
           })()}
         </p>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><h3>Insulin pump</h3></div>
+        ${state.pump && state.pump.mode !== 'off' ? `
+          <article class="item">
+            <p class="item-title">
+              ${state.pump.lastStatus && state.pump.lastStatus.iob != null
+                ? ('IOB ' + esc(String(state.pump.lastStatus.iob)) + ' U')
+                : (state.pump.brand && state.pump.brand !== 'unknown' ? esc(state.pump.brand) : 'Pump')}
+              ${state.pump.lastStatus && state.pump.lastStatus.suspended ? ' · <span class="badge warn">Suspended</span>' : ''}
+            </p>
+            <p class="item-meta">
+              ${state.pump.lastBolus && state.pump.lastBolus.insulin != null
+                ? ('Last bolus ' + esc(String(state.pump.lastBolus.insulin)) + ' U · ' + esc(new Date(state.pump.lastBolus.at).toLocaleString()))
+                : 'No recent bolus yet'}
+              ${state.pump.lastStatus && state.pump.lastStatus.reservoir != null ? (' · Reservoir ' + esc(String(state.pump.lastStatus.reservoir)) + ' U') : ''}
+              ${state.pump.lastStatus && state.pump.lastStatus.batteryPercent != null ? (' · Battery ' + esc(String(state.pump.lastStatus.batteryPercent)) + '%') : ''}
+              ${state.pump.lastError ? '<br><span class="badge warn">' + esc(state.pump.lastError) + '</span>' : ''}
+            </p>
+          </article>` : `<div class="empty">Connect her pump via Nightscout in Settings, or log boluses manually.</div>`}
+        <div class="item-actions" style="margin-top:10px">
+          <button type="button" data-open="bolus">Log bolus</button>
+          ${state.pump && state.pump.mode === 'nightscout' ? '<button type="button" class="secondary" id="btnRefreshPump">Refresh pump</button>' : ''}
+        </div>
       </section>
 
       <section class="section">
@@ -721,6 +797,45 @@
         </div>
       </section>
       <section class="section">
+        <div class="section-head"><h3>Insulin pump</h3></div>
+        <p class="lede">Pull IOB, reservoir, suspend status, and boluses from Nightscout (Loop, AndroidAPS, tconnectsync, Omnipod uploaders, etc.).</p>
+        <div class="field">
+          <label for="pumpMode">Source</label>
+          <select id="pumpMode">
+            <option value="off" ${state.pump.mode === 'off' ? 'selected' : ''}>Off</option>
+            <option value="nightscout" ${state.pump.mode === 'nightscout' ? 'selected' : ''}>Nightscout</option>
+            <option value="manual" ${state.pump.mode === 'manual' ? 'selected' : ''}>Manual logging only</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="pumpBrand">Pump / system</label>
+          <select id="pumpBrand">
+            <option value="unknown" ${state.pump.brand === 'unknown' ? 'selected' : ''}>Not sure</option>
+            <option value="omnipod" ${state.pump.brand === 'omnipod' ? 'selected' : ''}>Omnipod</option>
+            <option value="tandem" ${state.pump.brand === 'tandem' ? 'selected' : ''}>Tandem</option>
+            <option value="medtronic" ${state.pump.brand === 'medtronic' ? 'selected' : ''}>Medtronic</option>
+            <option value="loop" ${state.pump.brand === 'loop' ? 'selected' : ''}>Loop / AndroidAPS</option>
+          </select>
+        </div>
+        <label class="disclaimer" style="display:flex;gap:8px;align-items:flex-start;margin:8px 0 12px">
+          <input type="checkbox" id="pumpReuseNs" ${state.pump.reuseCgmNightscout ? 'checked' : ''}>
+          <span>Use the same Nightscout URL as CGM</span>
+        </label>
+        <div class="field">
+          <label for="pumpNightscout">Nightscout URL (if different)</label>
+          <input id="pumpNightscout" value="${esc(state.pump.nightscoutUrl || '')}" placeholder="https://yoursite.herokuapp.com">
+        </div>
+        <div class="field">
+          <label for="pumpNsSecret">Nightscout API secret</label>
+          <input id="pumpNsSecret" type="password" value="${esc(state.pump.nightscoutSecret || '')}">
+        </div>
+        <p class="disclaimer">Tandem users often sync with tconnectsync → Nightscout. Omnipod/Loop uploaders that post device status will show IOB here.</p>
+        <div class="item-actions">
+          <button type="button" id="btnSavePump">Save pump settings</button>
+          <button type="button" class="secondary" id="btnTestPump">Test pump now</button>
+        </div>
+      </section>
+      <section class="section">
         <div class="section-head"><h3>Family to alert</h3></div>
         <button type="button" data-open="family">Add family contact</button>
         <div class="list" style="margin-top:10px">
@@ -808,6 +923,18 @@
       <div class="field"><label for="sugarUnitField">Unit</label><input id="sugarUnitField" value="${esc(state.alertSettings.unit || 'mg/dL')}"></div>
       <div class="item-actions">
         <button type="button" id="modalSave">Save reading</button>
+        <button type="button" class="secondary" id="modalCancel">Cancel</button>
+      </div>
+    `;
+  }
+
+  function bolusForm() {
+    return `
+      <div class="field"><label for="bolusUnits">Bolus (units)</label><input id="bolusUnits" inputmode="decimal" placeholder="2.5"></div>
+      <div class="field"><label for="bolusCarbs">Carbs (g, optional)</label><input id="bolusCarbs" inputmode="decimal" placeholder="30"></div>
+      <div class="field"><label for="bolusNotes">Notes</label><textarea id="bolusNotes" placeholder="Meal bolus, correction…"></textarea></div>
+      <div class="item-actions">
+        <button type="button" id="modalSave">Save bolus</button>
         <button type="button" class="secondary" id="modalCancel">Cancel</button>
       </div>
     `;
@@ -961,6 +1088,7 @@
         if (kind === 'symptom') openModal('Log symptom', symptomForm(), saveSymptom);
         if (kind === 'vital') openModal('Log vital', vitalForm(), saveVital);
         if (kind === 'sugar') openModal('Log blood sugar', sugarForm(), saveSugar);
+        if (kind === 'bolus') openModal('Log bolus', bolusForm(), saveBolus);
         if (kind === 'appt') openModal('Add appointment', apptForm(), saveAppt);
         if (kind === 'contact') openModal('Add contact', contactForm(), saveContact);
         if (kind === 'question') openModal('Add question', questionForm(), saveQuestion);
@@ -977,6 +1105,8 @@
     }
     const refreshCgmBtn = document.getElementById('btnRefreshCgm');
     if (refreshCgmBtn) refreshCgmBtn.addEventListener('click', () => refreshCgm(true));
+    const refreshPumpBtn = document.getElementById('btnRefreshPump');
+    if (refreshPumpBtn) refreshPumpBtn.addEventListener('click', () => refreshPump(true));
     const saveCgm = document.getElementById('btnSaveCgm');
     if (saveCgm) {
       saveCgm.addEventListener('click', () => {
@@ -1004,6 +1134,35 @@
       state.cgm.nightscoutSecret = document.getElementById('cgmNsSecret').value;
       save();
       refreshCgm(true);
+    });
+    const savePump = document.getElementById('btnSavePump');
+    if (savePump) {
+      savePump.addEventListener('click', () => {
+        state.pump.mode = document.getElementById('pumpMode').value;
+        state.pump.brand = document.getElementById('pumpBrand').value;
+        state.pump.reuseCgmNightscout = document.getElementById('pumpReuseNs').checked;
+        state.pump.nightscoutUrl = document.getElementById('pumpNightscout').value.trim();
+        state.pump.nightscoutSecret = document.getElementById('pumpNsSecret').value;
+        save();
+        startCgmTimer();
+        toast(state.pump.mode === 'off' ? 'Pump off' : 'Pump settings saved');
+        if (state.pump.mode === 'nightscout') refreshPump(true);
+        else render();
+      });
+    }
+    const testPump = document.getElementById('btnTestPump');
+    if (testPump) testPump.addEventListener('click', () => {
+      state.pump.mode = document.getElementById('pumpMode').value;
+      state.pump.brand = document.getElementById('pumpBrand').value;
+      state.pump.reuseCgmNightscout = document.getElementById('pumpReuseNs').checked;
+      state.pump.nightscoutUrl = document.getElementById('pumpNightscout').value.trim();
+      state.pump.nightscoutSecret = document.getElementById('pumpNsSecret').value;
+      save();
+      if (state.pump.mode !== 'nightscout') {
+        toast('Set pump source to Nightscout to test');
+        return;
+      }
+      refreshPump(true);
     });
     const imOk = document.getElementById('btnImOk');
     if (imOk) imOk.addEventListener('click', () => { clearActiveAlert('ok'); toast('Glad you’re OK'); });
@@ -1293,6 +1452,29 @@
     }
   }
 
+  function saveBolus() {
+    const insulin = Number(document.getElementById('bolusUnits').value);
+    if (!Number.isFinite(insulin) || insulin <= 0) { toast('Enter bolus units'); return; }
+    const carbsRaw = document.getElementById('bolusCarbs').value.trim();
+    const carbs = carbsRaw ? Number(carbsRaw) : null;
+    const event = {
+      id: uid('bolus'),
+      at: new Date().toISOString(),
+      eventType: 'Bolus',
+      insulin,
+      carbs: Number.isFinite(carbs) ? carbs : null,
+      notes: document.getElementById('bolusNotes').value.trim(),
+      source: 'manual'
+    };
+    state.pump.manualEvents = (state.pump.manualEvents || []).concat(event).slice(-100);
+    state.pump.lastBolus = event;
+    if (state.pump.mode === 'off') state.pump.mode = 'manual';
+    save();
+    closeModal();
+    toast('Bolus saved');
+    render();
+  }
+
   function saveFamily() {
     const name = document.getElementById('famName').value.trim();
     const phone = document.getElementById('famPhone').value.trim();
@@ -1383,6 +1565,9 @@
   startCgmTimer();
   if (state.onboarded && state.cgm && state.cgm.mode !== 'off') {
     refreshCgm(false);
+  }
+  if (state.onboarded && state.pump && state.pump.mode === 'nightscout') {
+    refreshPump(false);
   }
 
   render();

@@ -14,6 +14,7 @@ function mustExist(rel) {
 mustExist('README.md');
 mustExist('web/index.html');
 mustExist('web/app.js');
+mustExist('web/pump.js');
 mustExist('web/dexcom.js');
 mustExist('web/alerts.js');
 mustExist('web/notes-import.js');
