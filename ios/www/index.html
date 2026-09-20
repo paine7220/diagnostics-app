@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="ATD Dummies">
+  <meta name="theme-color" content="#b8121b">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'">
   <title>Auto/Truck Diagnostics for Dummies</title>
   <link rel="manifest" href="./manifest.webmanifest">
@@ -13,56 +14,66 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <div class="topbar">
-    <button class="warn" id="btnRunDiagnosisTop">Run Diagnosis</button>
-    <button id="btnLookupTop">Quick Lookup</button>
-    <button id="btnRebuildTop">Engine Rebuild</button>
-    <button id="btnJobsTop">How-to Jobs</button>
-    <button class="good" id="btnSaveCaseTop">Save</button>
-    <button class="secondary" id="btnExportTop">Export</button>
-    <button class="secondary" id="btnComputerTop">Use on computer</button>
+  <div class="topbar" role="navigation" aria-label="Main actions">
+    <button id="btnLookupTop">Look up code</button>
+    <button class="warn" id="btnRunDiagnosisTop">Diagnose</button>
+    <button id="btnJobsTop">How-to</button>
+    <button id="btnRebuildTop">Rebuild</button>
+    <button class="good topbar-extra" id="btnSaveCaseTop">Save</button>
+    <button class="secondary topbar-extra" id="btnExportTop">Export</button>
+    <button class="secondary topbar-extra" id="btnComputerTop">Computer</button>
   </div>
   <div class="wrap">
     <div class="hero">
       <h1>Auto/Truck Diagnostics for Dummies <span class="ver" id="appVersion">v1.2.0</span></h1>
-      <div class="sub">Type a trouble code, open Engine Rebuild, or How-to Jobs. The same app also runs on a computer.</div>
+      <div class="sub">Enter the code from your scanner. Get plain-English meaning and driveway repair steps.</div>
       <div class="stats" id="dbStats"></div>
-      <div class="acceptance"><input type="checkbox" id="acceptLegal"><div>I know this is an assistant, not a guaranteed repair.</div></div>
+      <div class="acceptance">
+        <input type="checkbox" id="acceptLegal">
+        <div>I know this is an assistant, not a guaranteed repair. <span class="small">(Saved on this phone after you check it once.)</span></div>
+      </div>
     </div>
 
-    <div class="stack mt-14">
-      <section class="card" id="computerCard">
-        <h2>Use on a computer</h2>
-        <div class="small" id="computerStatus">The same app runs on a PC. You do not need this phone after you copy it over.</div>
-        <ol class="checks diy-list mt-10">
-          <li><strong>Fastest:</strong> on the computer, open Chrome or Edge and go to the same page you are reading now. Bookmark it.</li>
-          <li><strong>Offline folder:</strong> on the computer open GitHub → Code → Download ZIP. Unzip it. Double-click <code>GET_ON_COMPUTER.bat</code> (Windows) or <code>web/index.html</code> (any computer).</li>
-          <li><strong>Windows app window:</strong> after the unzip, install Node.js LTS, then double-click <code>windows\START_APP_FOR_TESTING.bat</code>. For a Setup EXE, use <code>windows\BUILD_WINDOWS_INSTALLER.bat</code>.</li>
-        </ol>
-        <div class="row mt-10">
-          <a class="button" href="./docs/computer.html">Full computer steps</a>
-        </div>
-      </section>
+    <div id="statusBanner" class="status-banner" hidden role="status" aria-live="polite"></div>
 
-      <section class="card" id="lookupCard">
-        <h2>Code lookup</h2>
-        <label for="codes">Code (example P0300)</label>
-        <textarea id="codes" placeholder="P0300"></textarea>
-        <div class="row">
-          <button id="btnLookup">Quick Lookup</button>
-          <button class="warn" id="btnRunDiagnosis">Run Diagnosis</button>
+    <div class="stack mt-14">
+      <section class="card primary-card" id="lookupCard">
+        <h2>1. Look up a code</h2>
+        <p class="lead">Type or paste what your OBD reader shows. Example: <strong>P0300</strong></p>
+        <label for="codes">Trouble code(s)</label>
+        <textarea id="codes" placeholder="P0300" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></textarea>
+        <div class="chip-row" id="exampleCodes" aria-label="Example codes">
+          <button type="button" class="chip" data-code="P0300">P0300 misfire</button>
+          <button type="button" class="chip" data-code="P0420">P0420 catalyst</button>
+          <button type="button" class="chip" data-code="P0171">P0171 lean</button>
+          <button type="button" class="chip" data-code="P0301">P0301 cyl 1</button>
         </div>
-        <div class="row">
-          <button class="secondary" id="btnSearchDtc">Search</button>
+        <div class="row primary-actions">
+          <button id="btnLookup">Quick Lookup</button>
+          <button class="warn" id="btnRunDiagnosis">Full Diagnosis</button>
+        </div>
+        <div class="row secondary-actions">
+          <button class="secondary" id="btnSearchDtc">Search words</button>
           <button class="secondary" id="btnClearCodes">Clear</button>
         </div>
         <label for="dbQuery">Or search a word</label>
-        <input id="dbQuery" placeholder="thermostat">
+        <input id="dbQuery" placeholder="thermostat, misfire, starter">
         <div id="codeResults" class="cards mt-10"></div>
       </section>
 
+      <section class="card" id="resultsCard">
+        <h2>2. Results</h2>
+        <div class="row results-toolbar">
+          <button class="secondary" id="btnSaveCase">Save</button>
+          <button class="secondary" id="btnLoadCase">Load last</button>
+          <button class="secondary" id="btnClearCase">Clear</button>
+          <button class="secondary" id="btnExport">Export</button>
+        </div>
+        <div id="results" class="out rich mt-10">Nothing yet. Enter a code above, then tap <strong>Quick Lookup</strong>.</div>
+      </section>
+
       <section class="card" id="jobsCard">
-        <h2>How-to jobs</h2>
+        <h2>3. How-to jobs</h2>
         <div class="small">Full driveway procedures: tools, parts, warnings, and numbered steps. Torque and fluid type still come from this vehicle’s service data.</div>
         <label for="jobQuery">Find a job</label>
         <input id="jobQuery" placeholder="starter, brakes, oil, axle, stereo">
@@ -70,7 +81,7 @@
       </section>
 
       <section class="card" id="rebuildCard">
-        <h2>Engine rebuild</h2>
+        <h2>4. Engine rebuild</h2>
         <div class="small" id="rebuildSummary">Prove it is a bottom-end or head job, then pull, measure, assemble, and break in. Torque comes from your engine’s service data.</div>
         <div class="symptoms mt-10" id="rebuildFlags">
           <label><input type="checkbox" id="flagRodKnock"> <span>Rod knock</span></label>
@@ -85,24 +96,28 @@
         <div id="rebuildStages" class="mt-10"></div>
       </section>
 
-      <section class="card" id="resultsCard">
-        <h2>Results</h2>
-        <div class="row">
-          <button class="secondary" id="btnSaveCase">Save Case</button>
-          <button class="secondary" id="btnLoadCase">Load Last</button>
-          <button class="secondary" id="btnClearCase">Clear Case</button>
-          <button class="secondary" id="btnExport">Export</button>
+      <details class="card collapsible" id="solutionsCardWrap">
+        <summary><strong>All repair solutions in this app</strong></summary>
+        <div id="solutionsCard">
+          <div class="small">Code-specific driveway steps for common OBD-II problems, plus a fallback playbook for every other bundled code. These are not factory shop manuals.</div>
+          <label for="solutionQuery">Find a repair</label>
+          <input id="solutionQuery" placeholder="P0442, starter, brakes, rebuild">
+          <div id="allSolutions" class="mt-10"></div>
         </div>
-        <div id="results" class="out rich mt-10">Nothing yet. Type a code above, then tap Quick Lookup for step-by-step DIY repair instructions.</div>
-      </section>
+      </details>
 
-      <section class="card" id="solutionsCard">
-        <h2>All repair solutions in this app</h2>
-        <div class="small">Code-specific driveway steps for common OBD-II problems, plus a fallback playbook for every other bundled code. These are not factory shop manuals.</div>
-        <label for="solutionQuery">Find a repair</label>
-        <input id="solutionQuery" placeholder="P0442, starter, brakes, rebuild">
-        <div id="allSolutions" class="mt-10"></div>
-      </section>
+      <details class="card collapsible" id="computerCard">
+        <summary><strong>Use on a computer</strong></summary>
+        <div class="small" id="computerStatus">Same app on a PC. Useful when you want a bigger screen or an offline folder.</div>
+        <ol class="checks diy-list mt-10">
+          <li><strong>Fastest:</strong> on the computer, open Chrome or Edge and go to the same page you are reading now. Bookmark it.</li>
+          <li><strong>Offline folder:</strong> on the computer open GitHub → Code → Download ZIP. Unzip it. Double-click <code>GET_ON_COMPUTER.bat</code> (Windows) or <code>web/index.html</code> (any computer).</li>
+          <li><strong>Windows app window:</strong> after the unzip, install Node.js LTS, then double-click <code>windows\START_APP_FOR_TESTING.bat</code>. For a Setup EXE, use <code>windows\BUILD_WINDOWS_INSTALLER.bat</code>.</li>
+        </ol>
+        <div class="row mt-10">
+          <a class="button" href="./docs/computer.html">Full computer steps</a>
+        </div>
+      </details>
 
       <details class="extra card">
         <summary>Vehicle (optional)</summary>
@@ -176,7 +191,7 @@
       </details>
     </div>
 
-    <div class="footer">Auto/Truck Diagnostics for Dummies <span id="footerVersion">v1.2.0</span></div>
+    <div class="footer">Auto/Truck Diagnostics for Dummies <span id="footerVersion">v1.2.0</span> · Offline on this device</div>
   </div>
   <script src="./data/dtc-db.js"></script>
   <script src="./data/common-jobs.js"></script>

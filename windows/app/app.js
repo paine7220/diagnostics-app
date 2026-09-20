@@ -47,13 +47,48 @@ function renderSymptoms(){
 function loadStats(){
   const stats = DiagEngine.computeStats(state.dtcDb);
   html('dbStats', `
-    <div class="stat"><strong>${stats.total.toLocaleString()}</strong><div class="small">Bundled DTCs</div></div>
+    <div class="stat"><strong>${stats.total.toLocaleString()}</strong><div class="small">Codes ready offline</div></div>
+    <div class="stat"><strong>v${esc(APP_VERSION)}</strong><div class="small">This build</div></div>
     <div class="stat"><strong>${stats.byFamily.Powertrain || 0}</strong><div class="small">Powertrain</div></div>
     <div class="stat"><strong>${stats.byFamily.Body || 0}</strong><div class="small">Body</div></div>
     <div class="stat"><strong>${stats.byFamily.Chassis || 0}</strong><div class="small">Chassis</div></div>
     <div class="stat"><strong>${stats.byFamily.Network || 0}</strong><div class="small">Network</div></div>
-    <div class="stat"><strong>v${esc(APP_VERSION)}</strong><div class="small">Offline build</div></div>
   `);
+}
+
+function showStatus(message, kind){
+  const banner = byId('statusBanner');
+  if(!banner){
+    if(message) alert(message);
+    return;
+  }
+  if(!message){
+    banner.hidden = true;
+    banner.textContent = '';
+    banner.className = 'status-banner';
+    return;
+  }
+  banner.hidden = false;
+  banner.textContent = message;
+  banner.className = 'status-banner' + (kind ? ' ' + kind : '');
+  clearTimeout(showStatus._timer);
+  showStatus._timer = setTimeout(() => {
+    if(banner.textContent === message) showStatus('');
+  }, 4500);
+}
+
+function restoreLegalAcceptance(){
+  const box = byId('acceptLegal');
+  if(!box) return;
+  try{
+    if(localStorage.getItem('atd_legal_ok') === '1') box.checked = true;
+  }catch(_err){ /* ignore */ }
+  box.addEventListener('change', () => {
+    try{
+      if(box.checked) localStorage.setItem('atd_legal_ok', '1');
+      else localStorage.removeItem('atd_legal_ok');
+    }catch(_err){ /* ignore */ }
+  });
 }
 
 async function loadDb(){
@@ -94,16 +129,24 @@ function fluidData(){
 }
 
 function requireLegalAcceptance(){
-  if(!byId('acceptLegal').checked){
-    alert('Check the legal acknowledgement box before running diagnosis.');
-    return false;
+  const box = byId('acceptLegal');
+  if(box && box.checked) return true;
+  showStatus('Check the box under the title first (“I know this is an assistant…”), then try again.', 'warn');
+  if(box){
+    box.focus();
+    const accept = box.closest('.acceptance');
+    if(accept) accept.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-  return true;
+  return false;
 }
 
 function showEl(id){
   const node = byId(id);
-  if(node) node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if(!node) return;
+  if(node.tagName === 'DETAILS') node.open = true;
+  const wrap = node.closest && node.closest('details');
+  if(wrap) wrap.open = true;
+  node.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderLookupCards(items){
@@ -131,9 +174,27 @@ function renderLookupCards(items){
 
 function quickLookup(){
   const codes = parseCodes();
-  if(!codes.length){ html('codeResults','<div class="code-card">Enter at least one code.</div>'); return; }
+  if(!codes.length){
+    html('codeResults','<div class="code-card">Enter at least one code (example <strong>P0300</strong>), or tap an example chip.</div>');
+    showStatus('Type a code first, then tap Quick Lookup.', 'warn');
+    const field = byId('codes');
+    if(field) field.focus();
+    return;
+  }
   const results = DiagEngine.lookupCodes(state.dtcDb, codes);
   renderLookupCards(results || []);
+  if(results && results.length){
+    showStatus('Found ' + results.length + ' code' + (results.length === 1 ? '' : 's') + '. Scroll for DIY steps.', 'ok');
+  }else{
+    showStatus('No match for those codes in the offline library.', 'warn');
+  }
+}
+
+function useExampleCode(code){
+  const field = byId('codes');
+  if(!field) return;
+  field.value = code;
+  quickLookup();
 }
 
 function searchLocalDb(){
@@ -154,12 +215,12 @@ function searchLocalDb(){
 function saveCase(){
   const payload = currentCase();
   localStorage.setItem('atd_case_latest', JSON.stringify(payload));
-  alert('Case saved locally on this device.');
+  showStatus('Case saved on this device.', 'ok');
 }
 
 function loadCase(){
   const raw = localStorage.getItem('atd_case_latest');
-  if(!raw){ alert('No saved case found.'); return; }
+  if(!raw){ showStatus('No saved case on this device yet.', 'warn'); return; }
   const saved = JSON.parse(raw);
   Object.entries(saved.vehicle || {}).forEach(([k,v]) => { if(byId(k)) byId(k).value = v || ''; });
   byId('codes').value = (saved.dtcs || []).join('\n');
@@ -175,7 +236,7 @@ function loadCase(){
     state.lastAnalysisText = saved.lastAnalysisText || '';
     renderAnalysis(saved.lastAnalysis);
   }
-  alert('Saved case loaded.');
+  showStatus('Saved case loaded.', 'ok');
 }
 
 function clearCase(){
@@ -193,8 +254,8 @@ function clearCase(){
   text('fluidOut', 'Fluid guidance will show here.');
   text('audioSummary', 'No audio analyzed yet.');
   text('imageSummary', 'No frame/image analyzed yet.');
-  html('results', 'Nothing yet. Type a code above, then tap Quick Lookup.');
-  alert('Saved case cleared.');
+  html('results', 'Nothing yet. Enter a code above, then tap <strong>Quick Lookup</strong>.');
+  showStatus('Saved case cleared.', 'ok');
 }
 
 function currentCase(){
@@ -531,9 +592,9 @@ function renderAnalysis(analysis){
 
 function bindEvents(){
   byId('btnLookup').onclick = quickLookup;
-  byId('btnLookupTop').onclick = quickLookup;
+  byId('btnLookupTop').onclick = () => { showEl('lookupCard'); const field = byId('codes'); if(field) field.focus(); };
   byId('btnSearchDtc').onclick = searchLocalDb;
-  byId('btnClearCodes').onclick = () => { byId('codes').value = ''; html('codeResults',''); };
+  byId('btnClearCodes').onclick = () => { byId('codes').value = ''; html('codeResults',''); showStatus(''); };
   byId('btnRunDiagnosis').onclick = runDiagnosis;
   byId('btnRunDiagnosisTop').onclick = runDiagnosis;
   const rebuildBtn = byId('btnRebuildTop');
@@ -550,6 +611,18 @@ function bindEvents(){
   byId('btnClearCase').onclick = clearCase;
   byId('btnExport').onclick = exportReport;
   byId('btnExportTop').onclick = exportReport;
+  document.querySelectorAll('[data-code]').forEach((chip) => {
+    chip.addEventListener('click', () => useExampleCode(chip.getAttribute('data-code')));
+  });
+  const codesField = byId('codes');
+  if(codesField){
+    codesField.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        quickLookup();
+      }
+    });
+  }
   byId('btnAudioUpload').onclick = () => byId('audioFile').click();
   byId('audioFile').onchange = async (e) => { const file = e.target.files[0]; if(file) await handleAudioFile(file); };
   byId('btnPhotoUpload').onclick = () => byId('photoFile').click();
@@ -670,6 +743,7 @@ function renderAllSolutions(filter){
 async function init(){
   fillYears();
   renderSymptoms();
+  restoreLegalAcceptance();
   bindEvents();
   text('appVersion', 'v' + APP_VERSION);
   text('footerVersion', 'v' + APP_VERSION);
@@ -692,8 +766,14 @@ async function init(){
   renderRebuildGuide();
   renderCommonJobs();
   document.querySelectorAll('details.extra').forEach((el) => {
-    el.open = window.innerWidth >= 800;
+    el.open = window.innerWidth >= 900;
   });
+  const solutionsWrap = byId('solutionsCardWrap');
+  if(solutionsWrap){
+    solutionsWrap.addEventListener('toggle', () => {
+      if(solutionsWrap.open) renderAllSolutions();
+    }, { once: false });
+  }
 }
 
 init();

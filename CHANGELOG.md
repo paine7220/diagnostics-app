@@ -2,6 +2,7 @@
 
 ## 1.2.0
 
+- Friendlier phone layout: code lookup first, numbered steps, example-code chips, shorter top bar, remembered legal checkbox, and status messages instead of constant alerts.
 - Ship the complete offline Auto/Truck Diagnostics for Dummies app as the GitHub source of truth (`web/`, `windows/`, `ios/`).
 - Fix DTC `P0300`: description is now **Random/Multiple Cylinder Misfire Detected** (subsystem `ignition_misfire`), matching the engine guidance. Sibling misfire codes `P0301`–`P0312` were one cylinder off and are restored to the standard SAE meanings. Leftover `P0320` “Cylinder 12 Misfire” text is restored to the ignition/engine-speed circuit meaning.
 - Align other high-traffic wrong descriptions with SAE / engine guidance: `P0171`, `P0174`, `P0335`, `P0420`, `P0430`, `P0480`, `P0521`, `P0700`. Add missing `U0100` and `C0035` entries used by the engine.
