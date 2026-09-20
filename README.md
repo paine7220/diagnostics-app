@@ -2,6 +2,8 @@
 
 Offline diagnostic assistant for Michael Paine. One canonical web app, two platform wrappers.
 
+> **Kathy’s Health** (separate project in this repo): see [`kathy-health/`](./kathy-health/) — personal medications, symptoms, vitals, and care notes for iPhone, with OneDrive/ChatGPT note import.
+
 ```
 web/          canonical app (edit this)
 windows/      Electron + electron-builder wrapper
