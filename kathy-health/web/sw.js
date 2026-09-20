@@ -1,10 +1,11 @@
-const CACHE = 'kathy-health-v3';
+const CACHE = 'kathy-health-v4';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './notes-import.js',
+  './alerts.js',
   './manifest.webmanifest',
   './privacy.html',
   './icons/icon-192.png',

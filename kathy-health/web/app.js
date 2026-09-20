@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'kathy_health_v1';
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
 
   const defaultState = () => ({
     version: VERSION,
@@ -15,12 +15,22 @@
     appointments: [],
     contacts: [],
     questions: [],
-    importedNotes: []
+    importedNotes: [],
+    family: [],
+    alertSettings: {
+      lowSugarThreshold: 70,
+      responseSeconds: 120,
+      webhookUrl: '',
+      unit: 'mg/dL'
+    },
+    activeAlert: null,
+    alertLog: []
   });
 
   let state = load();
   let route = 'today';
   let modal = null;
+  let alertTick = null;
 
   function load() {
     try {
@@ -67,6 +77,150 @@
     el.hidden = false;
     clearTimeout(toast._t);
     toast._t = setTimeout(() => { el.hidden = true; }, 2200);
+  }
+
+  function clearAlertTimer() {
+    if (alertTick) {
+      clearInterval(alertTick);
+      alertTick = null;
+    }
+  }
+
+  function startAlertTimer() {
+    clearAlertTimer();
+    if (!state.activeAlert || state.activeAlert.status !== 'waiting') return;
+    alertTick = setInterval(() => {
+      if (!state.activeAlert || state.activeAlert.status !== 'waiting') {
+        clearAlertTimer();
+        return;
+      }
+      if (Date.now() >= state.activeAlert.deadlineAt) {
+        dispatchFamilyAlert('timeout');
+        return;
+      }
+      render();
+    }, 1000);
+  }
+
+  function beginLowSugarAlert(sugarValue, unit) {
+    const seconds = Math.max(30, Number(state.alertSettings.responseSeconds || 120));
+    state.activeAlert = {
+      id: uid('alert'),
+      sugarValue: String(sugarValue),
+      unit: unit || state.alertSettings.unit || 'mg/dL',
+      startedAt: Date.now(),
+      deadlineAt: Date.now() + seconds * 1000,
+      status: 'waiting'
+    };
+    save();
+    KathyAlerts.notifyLocal(
+      'Low blood sugar check-in',
+      (state.profileName || 'Kathy') + ' — confirm you are OK'
+    );
+    startAlertTimer();
+    render();
+  }
+
+  function clearActiveAlert(reason) {
+    if (!state.activeAlert) return;
+    state.alertLog.push({
+      id: state.activeAlert.id,
+      at: new Date().toISOString(),
+      sugarValue: state.activeAlert.sugarValue,
+      outcome: reason || 'cleared'
+    });
+    state.activeAlert = null;
+    save();
+    clearAlertTimer();
+    render();
+  }
+
+  async function dispatchFamilyAlert(reason) {
+    if (!state.activeAlert) return;
+    const msg = KathyAlerts.buildAlertMessage(
+      state.profileName,
+      state.activeAlert.sugarValue,
+      state.activeAlert.unit
+    );
+    const family = state.family.filter((f) => f.phone);
+    state.activeAlert.status = 'sent';
+    state.activeAlert.sentAt = Date.now();
+    state.activeAlert.sentReason = reason;
+    state.alertLog.push({
+      id: state.activeAlert.id,
+      at: new Date().toISOString(),
+      sugarValue: state.activeAlert.sugarValue,
+      outcome: 'family_alerted_' + reason,
+      familyCount: family.length
+    });
+    save();
+    clearAlertTimer();
+
+    await KathyAlerts.notifyLocal('Family alert sent', msg);
+
+    if (state.alertSettings.webhookUrl) {
+      try {
+        await KathyAlerts.postWebhook(state.alertSettings.webhookUrl, {
+          type: 'kathy_low_sugar_no_response',
+          reason,
+          profileName: state.profileName,
+          sugarValue: state.activeAlert.sugarValue,
+          unit: state.activeAlert.unit,
+          message: msg,
+          at: new Date().toISOString(),
+          family: family.map((f) => ({ name: f.name, phone: f.phone }))
+        });
+      } catch (e) {
+        toast('Webhook alert failed — opening SMS');
+      }
+    }
+
+    // Open SMS to each family member (iPhone handles one compose sheet at a time)
+    family.forEach((f, i) => {
+      const url = KathyAlerts.smsUrl(f.phone, msg);
+      if (!url) return;
+      setTimeout(() => { window.location.href = url; }, i * 700);
+    });
+
+    if (!family.length) {
+      toast('No family phone numbers — add them in Settings');
+    } else {
+      toast('Alerting family now');
+    }
+    render();
+  }
+
+  function secondsLeft() {
+    if (!state.activeAlert || state.activeAlert.status !== 'waiting') return 0;
+    return Math.max(0, Math.ceil((state.activeAlert.deadlineAt - Date.now()) / 1000));
+  }
+
+  function renderAlertOverlay() {
+    if (!state.activeAlert) return '';
+    const waiting = state.activeAlert.status === 'waiting';
+    const left = secondsLeft();
+    return `
+      <div class="alert-overlay" role="alertdialog" aria-modal="true">
+        <div class="alert-card">
+          <p class="alert-kicker">${waiting ? 'Check in needed' : 'Family alerted'}</p>
+          <h2>Blood sugar ${esc(state.activeAlert.sugarValue)} ${esc(state.activeAlert.unit || '')}</h2>
+          ${waiting ? `
+            <p class="lede">If you do not confirm you are OK, Kathy’s Health will text your family.</p>
+            <p class="alert-countdown">${left}s</p>
+            <div class="item-actions" style="flex-direction:column">
+              <button type="button" class="ok" id="btnImOk">I’m OK — cancel alert</button>
+              <button type="button" class="warn" id="btnNeedHelp">I need help now</button>
+            </div>
+          ` : `
+            <p class="lede">Family was notified because there was no OK response in time (or help was requested).</p>
+            <div class="item-actions" style="flex-direction:column">
+              <button type="button" class="ok" id="btnImOkLate">I’m OK now</button>
+              ${state.family[0] && state.family[0].phone ? `<a class="button secondary" href="${esc(KathyAlerts.telUrl(state.family[0].phone))}">Call ${esc(state.family[0].name || 'family')}</a>` : ''}
+            </div>
+          `}
+        </div>
+      </div>
+    `;
   }
 
   function esc(s) {
@@ -128,12 +282,12 @@
         <div class="hero-copy">
           <p class="hero-kicker">Personal care companion</p>
           <h1>Kathy’s<br>Health</h1>
-          <p>Medications, symptoms, vitals, and visit notes — kept on this phone.</p>
+          <p>Medications, sugar checks, and family alerts when help is needed.</p>
         </div>
         <div class="hero-panel">
           <label>
             <input type="checkbox" id="acceptDisclaimer">
-            <span>I understand this app organizes personal health notes. It does not diagnose, treat, or replace professional medical care. In an emergency call local emergency services.</span>
+            <span>I understand this app helps organize care and can text family if blood sugar is low and I do not respond. It does not replace emergency services — call them in a true emergency.</span>
           </label>
         </div>
         <div class="hero-actions">
@@ -150,6 +304,7 @@
     const appt = nextAppointment();
     const recentSymptom = state.symptoms.slice().sort((a, b) => b.at.localeCompare(a.at))[0];
     const recentVital = state.vitals.slice().sort((a, b) => b.at.localeCompare(a.at))[0];
+    const familyReady = state.family.filter((f) => f.phone).length;
 
     return `
       <section class="section">
@@ -157,8 +312,20 @@
         <p class="lede">A calm view of what matters for ${esc(state.profileName)} right now.</p>
         <div class="stat-grid">
           <div class="stat"><strong>${pending.length}</strong><span>meds still due</span></div>
-          <div class="stat"><strong>${state.appointments.length}</strong><span>care visits saved</span></div>
+          <div class="stat"><strong>${familyReady}</strong><span>family alert contacts</span></div>
         </div>
+      </section>
+
+      <section class="section sugar-panel">
+        <div class="section-head"><h3>Blood sugar</h3></div>
+        <p class="item-meta">Low alert at ${esc(String(state.alertSettings.lowSugarThreshold))} ${esc(state.alertSettings.unit || 'mg/dL')}. If there is no OK within ${esc(String(state.alertSettings.responseSeconds))} seconds, family is texted.</p>
+        <div class="item-actions" style="margin-top:10px">
+          <button type="button" data-open="sugar">Log sugar</button>
+          <button type="button" class="warn" id="btnHelpNow">I need help</button>
+        </div>
+        <p class="item-meta" style="margin-top:10px">
+          ${recentVital && /blood sugar/i.test(recentVital.kind) ? `Latest sugar: ${esc(recentVital.value)}${recentVital.unit ? ' ' + esc(recentVital.unit) : ''}` : 'No sugar reading yet today.'}
+        </p>
       </section>
 
       <section class="section">
@@ -196,7 +363,6 @@
         </div>
         <p class="item-meta" style="margin-top:12px">
           ${recentSymptom ? `Latest symptom: ${esc(recentSymptom.label)} (${esc(String(recentSymptom.severity))}/5)` : 'No symptoms logged yet.'}
-          ${recentVital ? `<br>Latest vital: ${esc(recentVital.kind)} ${esc(recentVital.value)}${recentVital.unit ? ' ' + esc(recentVital.unit) : ''}` : ''}
         </p>
       </section>
     `;
@@ -347,16 +513,51 @@
   }
 
   function renderSettings() {
+    const family = state.family || [];
     return `
       <section class="section">
         <h2>Settings</h2>
-        <p class="lede">Backup to a file you can keep in OneDrive. Data never leaves this device unless you export it.</p>
+        <p class="lede">Family alerts need phone numbers (and optional webhook). Care notes can still stay on this device.</p>
         <div class="field">
           <label for="profileName">Preferred name</label>
           <input id="profileName" value="${esc(state.profileName)}">
         </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="lowSugar">Low sugar alert at</label>
+            <input id="lowSugar" type="number" value="${esc(String(state.alertSettings.lowSugarThreshold))}">
+          </div>
+          <div class="field">
+            <label for="responseSeconds">Seconds to respond</label>
+            <input id="responseSeconds" type="number" value="${esc(String(state.alertSettings.responseSeconds))}">
+          </div>
+        </div>
+        <div class="field">
+          <label for="sugarUnit">Sugar unit</label>
+          <input id="sugarUnit" value="${esc(state.alertSettings.unit || 'mg/dL')}" placeholder="mg/dL">
+        </div>
+        <div class="field">
+          <label for="webhookUrl">Optional alert webhook (IFTTT / Zapier / Twilio)</label>
+          <input id="webhookUrl" value="${esc(state.alertSettings.webhookUrl || '')}" placeholder="https://…">
+        </div>
         <div class="item-actions">
-          <button type="button" id="btnSaveProfile">Save name</button>
+          <button type="button" id="btnSaveProfile">Save alert settings</button>
+        </div>
+      </section>
+      <section class="section">
+        <div class="section-head"><h3>Family to alert</h3></div>
+        <button type="button" data-open="family">Add family contact</button>
+        <div class="list" style="margin-top:10px">
+          ${family.length ? family.map((f) => `
+            <article class="item">
+              <p class="item-title">${esc(f.name)}</p>
+              <p class="item-meta">${esc(f.phone)}${f.relation ? ' · ' + esc(f.relation) : ''}</p>
+              <button type="button" class="ghost" data-del-family="${esc(f.id)}">Remove</button>
+            </article>`).join('') : `<div class="empty">Add at least one family phone number so low-sugar alerts can text them.</div>`}
+        </div>
+      </section>
+      <section class="section">
+        <div class="item-actions">
           <button type="button" class="secondary" id="btnExport">Export backup</button>
           <label class="button secondary" style="display:inline-flex;align-items:center;justify-content:center">
             Import backup
@@ -402,19 +603,42 @@
     return `
       <div class="field"><label for="vitalKind">Type</label>
         <select id="vitalKind">
+          <option>Blood sugar</option>
           <option>Blood pressure</option>
           <option>Heart rate</option>
           <option>Weight</option>
-          <option>Blood sugar</option>
           <option>Temperature</option>
           <option>Other</option>
         </select>
       </div>
       <div class="field-row">
-        <div class="field"><label for="vitalValue">Value</label><input id="vitalValue" placeholder="120/80"></div>
-        <div class="field"><label for="vitalUnit">Unit</label><input id="vitalUnit" placeholder="mmHg, bpm, lb…"></div>
+        <div class="field"><label for="vitalValue">Value</label><input id="vitalValue" placeholder="65"></div>
+        <div class="field"><label for="vitalUnit">Unit</label><input id="vitalUnit" value="${esc(state.alertSettings.unit || 'mg/dL')}" placeholder="mg/dL"></div>
       </div>
       <div class="field"><label for="vitalNotes">Notes</label><textarea id="vitalNotes"></textarea></div>
+      <div class="item-actions">
+        <button type="button" id="modalSave">Save</button>
+        <button type="button" class="secondary" id="modalCancel">Cancel</button>
+      </div>
+    `;
+  }
+
+  function sugarForm() {
+    return `
+      <div class="field"><label for="sugarValue">Blood sugar</label><input id="sugarValue" inputmode="decimal" placeholder="65"></div>
+      <div class="field"><label for="sugarUnitField">Unit</label><input id="sugarUnitField" value="${esc(state.alertSettings.unit || 'mg/dL')}"></div>
+      <div class="item-actions">
+        <button type="button" id="modalSave">Save reading</button>
+        <button type="button" class="secondary" id="modalCancel">Cancel</button>
+      </div>
+    `;
+  }
+
+  function familyForm() {
+    return `
+      <div class="field"><label for="famName">Name</label><input id="famName" placeholder="Michael"></div>
+      <div class="field"><label for="famPhone">Phone</label><input id="famPhone" inputmode="tel" placeholder="555-555-5555"></div>
+      <div class="field"><label for="famRelation">Relation</label><input id="famRelation" placeholder="Son, spouse…"></div>
       <div class="item-actions">
         <button type="button" id="modalSave">Save</button>
         <button type="button" class="secondary" id="modalCancel">Cancel</button>
@@ -482,7 +706,7 @@
     if (!state.onboarded) {
       header.hidden = true;
       tabbar.hidden = true;
-      main.innerHTML = renderWelcome() + renderModal();
+      main.innerHTML = renderWelcome() + renderModal() + renderAlertOverlay();
       bind();
       return;
     }
@@ -502,8 +726,9 @@
     else if (route === 'care') html = renderCare();
     else if (route === 'notes') html = renderNotes();
     else if (route === 'settings') html = renderSettings();
-    main.innerHTML = html + renderModal();
+    main.innerHTML = html + renderModal() + renderAlertOverlay();
     bind();
+    if (state.activeAlert && state.activeAlert.status === 'waiting') startAlertTimer();
   }
 
   function bind() {
@@ -550,9 +775,33 @@
         if (kind === 'med') openModal('Add medication', medForm(), saveMed);
         if (kind === 'symptom') openModal('Log symptom', symptomForm(), saveSymptom);
         if (kind === 'vital') openModal('Log vital', vitalForm(), saveVital);
+        if (kind === 'sugar') openModal('Log blood sugar', sugarForm(), saveSugar);
         if (kind === 'appt') openModal('Add appointment', apptForm(), saveAppt);
         if (kind === 'contact') openModal('Add contact', contactForm(), saveContact);
         if (kind === 'question') openModal('Add question', questionForm(), saveQuestion);
+        if (kind === 'family') openModal('Add family contact', familyForm(), saveFamily);
+      });
+    });
+
+    const helpNow = document.getElementById('btnHelpNow');
+    if (helpNow) {
+      helpNow.addEventListener('click', () => {
+        beginLowSugarAlert('help', state.alertSettings.unit || 'mg/dL');
+        dispatchFamilyAlert('help_requested');
+      });
+    }
+    const imOk = document.getElementById('btnImOk');
+    if (imOk) imOk.addEventListener('click', () => { clearActiveAlert('ok'); toast('Glad you’re OK'); });
+    const imOkLate = document.getElementById('btnImOkLate');
+    if (imOkLate) imOkLate.addEventListener('click', () => { clearActiveAlert('ok_after_alert'); toast('Alert cleared'); });
+    const needHelp = document.getElementById('btnNeedHelp');
+    if (needHelp) needHelp.addEventListener('click', () => dispatchFamilyAlert('help_requested'));
+
+    document.querySelectorAll('[data-del-family]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.family = state.family.filter((f) => f.id !== btn.getAttribute('data-del-family'));
+        save();
+        render();
       });
     });
 
@@ -662,8 +911,12 @@
     if (saveProfile) {
       saveProfile.addEventListener('click', () => {
         state.profileName = document.getElementById('profileName').value.trim() || 'Kathy';
+        state.alertSettings.lowSugarThreshold = Number(document.getElementById('lowSugar').value || 70);
+        state.alertSettings.responseSeconds = Math.max(30, Number(document.getElementById('responseSeconds').value || 120));
+        state.alertSettings.unit = document.getElementById('sugarUnit').value.trim() || 'mg/dL';
+        state.alertSettings.webhookUrl = document.getElementById('webhookUrl').value.trim();
         save();
-        toast('Saved');
+        toast('Alert settings saved');
       });
     }
     const exportBtn = document.getElementById('btnExport');
@@ -760,17 +1013,58 @@
   function saveVital() {
     const value = document.getElementById('vitalValue').value.trim();
     if (!value) { toast('Enter a value'); return; }
+    const kind = document.getElementById('vitalKind').value;
+    const unit = document.getElementById('vitalUnit').value.trim();
     state.vitals.push({
       id: uid('vit'),
-      kind: document.getElementById('vitalKind').value,
+      kind,
       value,
-      unit: document.getElementById('vitalUnit').value.trim(),
+      unit,
       notes: document.getElementById('vitalNotes').value.trim(),
       at: new Date().toISOString()
     });
     save();
     closeModal();
     toast('Vital logged');
+    if (/blood sugar/i.test(kind) && KathyAlerts.isLowSugar(value, state.alertSettings.lowSugarThreshold)) {
+      beginLowSugarAlert(value, unit || state.alertSettings.unit);
+    }
+  }
+
+  function saveSugar() {
+    const value = document.getElementById('sugarValue').value.trim();
+    if (!value) { toast('Enter a reading'); return; }
+    const unit = document.getElementById('sugarUnitField').value.trim() || state.alertSettings.unit || 'mg/dL';
+    state.vitals.push({
+      id: uid('vit'),
+      kind: 'Blood sugar',
+      value,
+      unit,
+      notes: '',
+      at: new Date().toISOString()
+    });
+    save();
+    closeModal();
+    toast('Sugar logged');
+    if (KathyAlerts.isLowSugar(value, state.alertSettings.lowSugarThreshold)) {
+      beginLowSugarAlert(value, unit);
+    }
+  }
+
+  function saveFamily() {
+    const name = document.getElementById('famName').value.trim();
+    const phone = document.getElementById('famPhone').value.trim();
+    if (!name || !phone) { toast('Name and phone required'); return; }
+    state.family.push({
+      id: uid('fam'),
+      name,
+      phone,
+      relation: document.getElementById('famRelation').value.trim(),
+      createdAt: new Date().toISOString()
+    });
+    save();
+    closeModal();
+    toast('Family contact saved');
   }
 
   function saveAppt() {
@@ -834,6 +1128,14 @@
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+
+  if (state.activeAlert && state.activeAlert.status === 'waiting') {
+    if (Date.now() >= state.activeAlert.deadlineAt) {
+      dispatchFamilyAlert('timeout');
+    } else {
+      startAlertTimer();
+    }
   }
 
   render();
