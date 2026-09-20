@@ -94,9 +94,13 @@
 
   function nextAppointment() {
     const day = todayISO();
-    return state.appointments
+    const upcoming = state.appointments
       .filter((a) => !a.when || a.when >= day)
-      .sort((a, b) => String(a.when || '9999').localeCompare(String(b.when || '9999')))[0];
+      .sort((a, b) => String(a.when || '9999').localeCompare(String(b.when || '9999')));
+    if (upcoming[0]) return upcoming[0];
+    return state.appointments
+      .slice()
+      .sort((a, b) => String(b.when || '').localeCompare(String(a.when || '')))[0];
   }
 
   function markDose(medId, time, status) {
@@ -324,7 +328,7 @@
         <p class="lede">Paste text from OneDrive or ChatGPT. Headings like Medications, Appointments, Contacts, and Questions help the importer.</p>
         <div class="field">
           <label for="notesPaste">Notes</label>
-          <textarea id="notesPaste" placeholder="Medications&#10;- Lisinopril 10mg once daily&#10;&#10;Appointments&#10;- Dr. Lee follow-up March 20, 2026 10:00&#10;&#10;Questions&#10;- Ask about dizziness after morning dose"></textarea>
+          <textarea id="notesPaste" placeholder="Medications&#10;- Lisinopril 10mg once daily&#10;&#10;Appointments&#10;- Dr. Lee follow-up 2026-10-20 10:00&#10;&#10;Questions&#10;- Ask about dizziness after morning dose"></textarea>
         </div>
         <button type="button" id="btnImportNotes">Import into Kathy’s Health</button>
         <p class="disclaimer" style="margin-top:12px">Review everything after import. The parser is a helper, not a pharmacist.</p>

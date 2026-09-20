@@ -21,6 +21,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body {
   margin: 0;
   min-height: 100%;
@@ -108,20 +109,21 @@ main {
   backdrop-filter: blur(14px);
   z-index: 30;
 }
-.tab {
+#tabbar button.tab {
   border: 0;
-  background: transparent;
-  color: var(--ink-soft);
+  background: transparent !important;
+  color: var(--ink-soft) !important;
   font: inherit;
   font-size: 0.78rem;
   font-weight: 600;
   padding: 10px 4px;
   border-radius: 14px;
   min-height: 44px;
+  box-shadow: none;
 }
-.tab.active {
-  color: var(--brand-deep);
-  background: rgba(31, 122, 108, 0.12);
+#tabbar button.tab.active {
+  color: var(--brand-deep) !important;
+  background: rgba(31, 122, 108, 0.16) !important;
 }
 
 .hero-screen {
@@ -389,7 +391,7 @@ button:disabled { opacity: 0.45; cursor: default; }
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(88px + var(--safe-bottom));
+  bottom: calc(108px + var(--safe-bottom));
   transform: translateX(-50%);
   background: var(--brand-deep);
   color: #fff;

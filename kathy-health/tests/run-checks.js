@@ -45,7 +45,7 @@ Medications
 - Metformin 500mg twice a day
 
 Appointments
-- Dr. Lee follow-up 2026-03-20 10:00
+- Dr. Lee follow-up 2026-10-20 10:00
 
 Contacts
 - Dr. Lee primary care 555-123-4567

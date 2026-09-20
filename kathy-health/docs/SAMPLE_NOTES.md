@@ -8,8 +8,8 @@ Use this shape when copying from OneDrive or ChatGPT.
 - Atorvastatin 20mg at bedtime
 
 ## Appointments
-- Dr. Lee follow-up 2026-03-20 10:00
-- Lab work March 18, 2026 morning
+- Dr. Lee follow-up 2026-10-20 10:00
+- Lab work October 18, 2026 morning
 
 ## Contacts
 - Dr. Lee primary care 555-123-4567

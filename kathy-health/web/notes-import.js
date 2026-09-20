@@ -10,7 +10,7 @@
   }
 
   function parseDose(line) {
-    const m = line.match(/(\d+(?:\.\d+)?\s?(?:mg|mcg|g|ml|units?|iu)\b.*)$/i);
+    const m = line.match(/(\d+(?:\.\d+)?\s?(?:mg|mcg|g|ml|units?|iu)\b)/i);
     if (m) return clean(m[1]);
     const m2 = line.match(/\b(\d+\s*(?:tablet|tab|capsule|cap|puff|drop)s?)\b/i);
     return m2 ? clean(m2[1]) : '';
@@ -90,13 +90,14 @@
       const heuristicOk = !mode || mode === 'other';
 
       if (mode === 'appts' || (heuristicOk && looksLikeAppt(line))) {
+        const title = clean(line.replace(/^[-*•\d.)\s]+/, '')).slice(0, 120);
         appointments.push({
           id: uid('appt'),
-          title: clean(line.replace(/^[-*•\d.)\s]+/, '')).slice(0, 120),
+          title,
           when: parseDateHint(line),
           time: (line.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/) || [])[0] || '',
           location: '',
-          notes: line,
+          notes: '',
           createdAt: new Date().toISOString()
         });
         continue;
@@ -109,7 +110,7 @@
           name: clean(line.replace(phone, '').replace(/^[-*•\d.)\s]+/, '').replace(/phone|call|contact/ig, '')).slice(0, 80) || 'Care contact',
           role: /pharmacy/i.test(line) ? 'Pharmacy' : (/nurse/i.test(line) ? 'Nurse' : 'Provider'),
           phone: phone,
-          notes: line,
+          notes: '',
           createdAt: new Date().toISOString()
         });
         continue;
@@ -133,7 +134,7 @@
             name,
             dose: parseDose(line),
             times: parseSchedule(line),
-            notes: line,
+            notes: '',
             active: true,
             createdAt: new Date().toISOString()
           });
