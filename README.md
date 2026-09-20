@@ -16,7 +16,7 @@ Version **1.2.0**. Core diagnosis is on-device: bundled DTC lookup, symptom tria
 
 The phone page and the PC copy are the same app.
 
-1. On the computer, download the project ZIP from GitHub (**Code → Download ZIP**) or grab [this branch ZIP](https://github.com/paine7220/diagnostics-app/archive/refs/heads/cursor/transfer-to-computer-2091.zip).
+1. On the computer, download the project ZIP from GitHub (**Code → Download ZIP**) or grab the [main branch ZIP](https://github.com/paine7220/diagnostics-app/archive/refs/heads/main.zip).
 2. Unzip it. Double-click `GET_ON_COMPUTER.bat` (Windows) or open `web/index.html` (any computer).
 3. Optional desktop window: install Node.js LTS, then run `windows\START_APP_FOR_TESTING.bat`.
 4. Optional Setup EXE: `windows\BUILD_WINDOWS_INSTALLER.bat`. GitHub Actions workflow **Computer copy** also uploads `ATDD-computer-copy-1.2.0.zip` and, when the Windows job finishes, the unsigned installer EXEs.
