@@ -9,10 +9,10 @@
 <body>
   <main style="padding:24px;max-width:640px;margin:0 auto">
     <h2>Privacy</h2>
-    <p class="lede">Kathy’s Health stores medications, symptoms, vitals, appointments, contacts, and notes in this device’s browser storage (localStorage).</p>
-    <p class="disclaimer">Family alert SMS opens the phone’s Messages app with a pre-filled text to numbers you saved. An optional webhook URL you configure can receive alert JSON over HTTPS.</p>
-    <p class="disclaimer">Import notes only uses text you paste. Export backup creates a file you choose where to keep (for example OneDrive).</p>
-    <p class="disclaimer">Clearing site data, or Erase all data in Settings, removes the local copy.</p>
+    <p class="lede">Care notes, medications, and vitals stay in this device’s browser storage unless you export a backup.</p>
+    <p class="disclaimer">When a low-sugar check-in times out (or help is requested), the app sends an alert JSON payload to the webhook URL you configure. That service (for example the included Cloudflare worker with Twilio) can text family automatically.</p>
+    <p class="disclaimer">Family phone numbers you enter are included in that alert payload so the webhook can deliver SMS.</p>
+    <p class="disclaimer">Import notes only uses text you paste. Clearing site data or Erase all data removes the local copy.</p>
     <p><a href="./index.html">Back to app</a></p>
   </main>
 </body>

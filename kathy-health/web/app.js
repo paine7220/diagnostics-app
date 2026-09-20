@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'kathy_health_v1';
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
 
   const defaultState = () => ({
     version: VERSION,
@@ -143,6 +143,17 @@
       state.activeAlert.unit
     );
     const family = state.family.filter((f) => f.phone);
+    const webhook = (state.alertSettings.webhookUrl || '').trim();
+    const payload = KathyAlerts.alertPayload({
+      type: 'kathy_low_sugar_no_response',
+      reason,
+      profileName: state.profileName,
+      sugarValue: state.activeAlert.sugarValue,
+      unit: state.activeAlert.unit,
+      message: msg,
+      family: family.map((f) => ({ name: f.name, phone: f.phone, relation: f.relation || '' }))
+    });
+
     state.activeAlert.status = 'sent';
     state.activeAlert.sentAt = Date.now();
     state.activeAlert.sentReason = reason;
@@ -151,41 +162,39 @@
       at: new Date().toISOString(),
       sugarValue: state.activeAlert.sugarValue,
       outcome: 'family_alerted_' + reason,
-      familyCount: family.length
+      familyCount: family.length,
+      webhook: Boolean(webhook)
     });
     save();
     clearAlertTimer();
 
     await KathyAlerts.notifyLocal('Family alert sent', msg);
 
-    if (state.alertSettings.webhookUrl) {
-      try {
-        await KathyAlerts.postWebhook(state.alertSettings.webhookUrl, {
-          type: 'kathy_low_sugar_no_response',
-          reason,
-          profileName: state.profileName,
-          sugarValue: state.activeAlert.sugarValue,
-          unit: state.activeAlert.unit,
-          message: msg,
-          at: new Date().toISOString(),
-          family: family.map((f) => ({ name: f.name, phone: f.phone }))
-        });
-      } catch (e) {
-        toast('Webhook alert failed — opening SMS');
-      }
+    let webhookResult = { ok: false, skipped: true };
+    if (webhook) {
+      webhookResult = await KathyAlerts.postWebhook(webhook, payload);
+      state.activeAlert.webhookOk = webhookResult.ok;
+      save();
     }
 
-    // Open SMS to each family member (iPhone handles one compose sheet at a time)
-    family.forEach((f, i) => {
-      const url = KathyAlerts.smsUrl(f.phone, msg);
-      if (!url) return;
-      setTimeout(() => { window.location.href = url; }, i * 700);
-    });
+    // SMS compose only when Kathy can still interact ("I need help").
+    // On timeout she may be unresponsive — webhook must carry that alert.
+    if (reason === 'help_requested') {
+      family.forEach((f, i) => {
+        const url = KathyAlerts.smsUrl(f.phone, msg);
+        if (!url) return;
+        setTimeout(() => { window.location.href = url; }, i * 700);
+      });
+    }
 
-    if (!family.length) {
-      toast('No family phone numbers — add them in Settings');
+    if (!webhook && !family.length) {
+      toast('Add family phones and an alert webhook in Settings');
+    } else if (!webhook) {
+      toast('No webhook set — family SMS needs the alert worker for no-response alerts');
+    } else if (webhookResult.ok) {
+      toast('Family alert sent automatically');
     } else {
-      toast('Alerting family now');
+      toast('Alert webhook failed — check Settings URL');
     }
     render();
   }
@@ -205,14 +214,16 @@
           <p class="alert-kicker">${waiting ? 'Check in needed' : 'Family alerted'}</p>
           <h2>Blood sugar ${esc(state.activeAlert.sugarValue)} ${esc(state.activeAlert.unit || '')}</h2>
           ${waiting ? `
-            <p class="lede">If you do not confirm you are OK, Kathy’s Health will text your family.</p>
+            <p class="lede">If you do not confirm you are OK, family is alerted automatically (no tap required).</p>
             <p class="alert-countdown">${left}s</p>
             <div class="item-actions" style="flex-direction:column">
               <button type="button" class="ok" id="btnImOk">I’m OK — cancel alert</button>
               <button type="button" class="warn" id="btnNeedHelp">I need help now</button>
             </div>
           ` : `
-            <p class="lede">Family was notified because there was no OK response in time (or help was requested).</p>
+            <p class="lede">${state.activeAlert.webhookOk === false
+              ? 'Tried to alert family, but the webhook did not succeed. Call someone now.'
+              : 'Family was notified because there was no OK response in time (or help was requested).'}</p>
             <div class="item-actions" style="flex-direction:column">
               <button type="button" class="ok" id="btnImOkLate">I’m OK now</button>
               ${state.family[0] && state.family[0].phone ? `<a class="button secondary" href="${esc(KathyAlerts.telUrl(state.family[0].phone))}">Call ${esc(state.family[0].name || 'family')}</a>` : ''}
@@ -318,7 +329,7 @@
 
       <section class="section sugar-panel">
         <div class="section-head"><h3>Blood sugar</h3></div>
-        <p class="item-meta">Low alert at ${esc(String(state.alertSettings.lowSugarThreshold))} ${esc(state.alertSettings.unit || 'mg/dL')}. If there is no OK within ${esc(String(state.alertSettings.responseSeconds))} seconds, family is texted.</p>
+        <p class="item-meta">Low alert at ${esc(String(state.alertSettings.lowSugarThreshold))} ${esc(state.alertSettings.unit || 'mg/dL')}. If there is no OK within ${esc(String(state.alertSettings.responseSeconds))} seconds, family is alerted automatically.</p>
         <div class="item-actions" style="margin-top:10px">
           <button type="button" data-open="sugar">Log sugar</button>
           <button type="button" class="warn" id="btnHelpNow">I need help</button>
@@ -514,10 +525,11 @@
 
   function renderSettings() {
     const family = state.family || [];
+    const webhookReady = Boolean((state.alertSettings.webhookUrl || '').trim());
     return `
       <section class="section">
         <h2>Settings</h2>
-        <p class="lede">Family alerts need phone numbers (and optional webhook). Care notes can still stay on this device.</p>
+        <p class="lede">For alerts when Kathy cannot use the phone, set a webhook that texts family automatically.</p>
         <div class="field">
           <label for="profileName">Preferred name</label>
           <input id="profileName" value="${esc(state.profileName)}">
@@ -537,11 +549,15 @@
           <input id="sugarUnit" value="${esc(state.alertSettings.unit || 'mg/dL')}" placeholder="mg/dL">
         </div>
         <div class="field">
-          <label for="webhookUrl">Optional alert webhook (IFTTT / Zapier / Twilio)</label>
-          <input id="webhookUrl" value="${esc(state.alertSettings.webhookUrl || '')}" placeholder="https://…">
+          <label for="webhookUrl">Alert webhook (required for no-response texts)</label>
+          <input id="webhookUrl" value="${esc(state.alertSettings.webhookUrl || '')}" placeholder="https://kathy-health-alerts….workers.dev/alert">
         </div>
+        <p class="disclaimer">${webhookReady
+          ? 'Webhook saved — low-sugar timeouts will notify family without Kathy tapping Send.'
+          : 'Without a webhook, the phone cannot text family if Kathy is unresponsive. Deploy kathy-health/alert-worker or use IFTTT/Zapier.'}</p>
         <div class="item-actions">
           <button type="button" id="btnSaveProfile">Save alert settings</button>
+          <button type="button" class="secondary" id="btnTestAlert">Send test alert</button>
         </div>
       </section>
       <section class="section">
@@ -553,7 +569,7 @@
               <p class="item-title">${esc(f.name)}</p>
               <p class="item-meta">${esc(f.phone)}${f.relation ? ' · ' + esc(f.relation) : ''}</p>
               <button type="button" class="ghost" data-del-family="${esc(f.id)}">Remove</button>
-            </article>`).join('') : `<div class="empty">Add at least one family phone number so low-sugar alerts can text them.</div>`}
+            </article>`).join('') : `<div class="empty">Add at least one family phone number for the alert worker to text.</div>`}
         </div>
       </section>
       <section class="section">
@@ -924,7 +940,34 @@
         state.alertSettings.unit = document.getElementById('sugarUnit').value.trim() || 'mg/dL';
         state.alertSettings.webhookUrl = document.getElementById('webhookUrl').value.trim();
         save();
-        toast('Alert settings saved');
+        toast(state.alertSettings.webhookUrl ? 'Alert settings saved' : 'Saved — add a webhook for no-response texts');
+        render();
+      });
+    }
+    const testAlert = document.getElementById('btnTestAlert');
+    if (testAlert) {
+      testAlert.addEventListener('click', async () => {
+        const webhook = (state.alertSettings.webhookUrl || '').trim();
+        const family = state.family.filter((f) => f.phone);
+        if (!webhook) {
+          toast('Add an alert webhook first');
+          return;
+        }
+        if (!family.length) {
+          toast('Add a family phone number first');
+          return;
+        }
+        const msg = KathyAlerts.buildAlertMessage(state.profileName, 'TEST', state.alertSettings.unit);
+        const result = await KathyAlerts.postWebhook(webhook, KathyAlerts.alertPayload({
+          type: 'kathy_health_test',
+          reason: 'manual_test',
+          profileName: state.profileName,
+          sugarValue: 'TEST',
+          unit: state.alertSettings.unit,
+          message: msg,
+          family: family.map((f) => ({ name: f.name, phone: f.phone, relation: f.relation || '' }))
+        }));
+        toast(result.ok ? 'Test alert sent' : 'Test alert failed');
       });
     }
     const exportBtn = document.getElementById('btnExport');

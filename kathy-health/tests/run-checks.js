@@ -49,6 +49,12 @@ assert.ok(Alerts.isLowSugar('65', 70), '65 is low');
 assert.ok(!Alerts.isLowSugar('110', 70), '110 is not low');
 assert.ok(Alerts.smsUrl('555-123-4567', 'help').startsWith('sms:'), 'sms url');
 assert.ok(/low blood sugar/i.test(Alerts.buildAlertMessage('Kathy', '55', 'mg/dL')), 'alert message');
+assert.ok(typeof Alerts.postWebhook === 'function', 'webhook helper');
+assert.ok(Alerts.alertPayload({ message: 'x', family: [] }).type, 'payload helper');
+
+const worker = fs.readFileSync(path.join(root, 'alert-worker/src/index.js'), 'utf8');
+assert.ok(worker.includes('sendTwilioSms'), 'twilio sms path');
+assert.ok(worker.includes('/alert'), 'alert route');
 
 const sample = `
 Medications

@@ -30,14 +30,46 @@
     return digits ? 'tel:' + digits : '';
   }
 
+  function alertPayload(fields) {
+    return {
+      type: fields.type || 'kathy_low_sugar_no_response',
+      reason: fields.reason || null,
+      profileName: fields.profileName || null,
+      sugarValue: fields.sugarValue || null,
+      unit: fields.unit || null,
+      message: fields.message || '',
+      at: new Date().toISOString(),
+      family: fields.family || []
+    };
+  }
+
+  /**
+   * Hands-free alert: works even if Kathy cannot tap the screen.
+   * Prefer sendBeacon, then keepalive fetch.
+   */
   async function postWebhook(url, payload) {
-    if (!url) return { ok: false, skipped: true };
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    return { ok: res.ok, status: res.status };
+    if (!url) return { ok: false, skipped: true, mode: 'none' };
+    const body = JSON.stringify(payload);
+    try {
+      if (typeof root.navigator !== 'undefined' && typeof root.navigator.sendBeacon === 'function') {
+        const blob = new Blob([body], { type: 'application/json' });
+        const queued = root.navigator.sendBeacon(url, blob);
+        if (queued) return { ok: true, mode: 'beacon' };
+      }
+    } catch (e) { /* fall through */ }
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true,
+        mode: 'cors'
+      });
+      return { ok: res.ok, status: res.status, mode: 'fetch' };
+    } catch (err) {
+      return { ok: false, error: String(err && err.message || err), mode: 'fetch' };
+    }
   }
 
   async function notifyLocal(title, body) {
@@ -60,6 +92,7 @@
     buildAlertMessage,
     smsUrl,
     telUrl,
+    alertPayload,
     postWebhook,
     notifyLocal
   };
