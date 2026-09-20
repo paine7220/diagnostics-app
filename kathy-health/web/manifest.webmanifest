@@ -1,0 +1,17 @@
+{
+  "name": "Kathy Health",
+  "short_name": "Kathy Health",
+  "description": "Personal health companion for Kathy — meds, feel logs, vitals, and care on your iPhone.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f7f5",
+  "theme_color": "#1a5f5a",
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

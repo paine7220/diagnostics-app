@@ -3,6 +3,8 @@
 node_modules/
 windows/node_modules/
 ios/node_modules/
+kathy-health/ios/node_modules/
+kathy-health/node_modules/
 windows/dist/
 windows/dist_electron/
 dist-computer/

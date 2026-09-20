@@ -1,0 +1,17 @@
+{
+  "name": "kathy-health-ios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "iOS wrapper (Capacitor) for Kathy Health",
+  "scripts": {
+    "sync": "cap sync ios",
+    "open": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.2",
+    "@capacitor/ios": "^6.2.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.2"
+  }
+}
