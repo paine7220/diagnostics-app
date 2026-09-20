@@ -567,6 +567,9 @@
         </div>
         <p class="disclaimer" style="margin-top:16px">Kathy’s Health v${VERSION}. Not a medical device. For emergencies call local emergency services.</p>
         <p class="disclaimer"><a href="./privacy.html">Privacy</a></p>
+        <div class="item-actions" style="margin-top:12px">
+          <button type="button" class="secondary" data-route-link="today">Back to Today</button>
+        </div>
       </section>
     `;
   }
@@ -712,12 +715,17 @@
     }
 
     header.hidden = false;
-    tabbar.hidden = route === 'settings';
+    tabbar.hidden = false;
     headerDate.textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
     tabbar.querySelectorAll('.tab').forEach((btn) => {
       btn.classList.toggle('active', btn.getAttribute('data-route') === route);
     });
+
+    if (route === 'settings') {
+      // Keep tabs available; highlight none while editing settings.
+      tabbar.querySelectorAll('.tab').forEach((btn) => btn.classList.remove('active'));
+    }
 
     let html = '';
     if (route === 'today') html = renderToday();
