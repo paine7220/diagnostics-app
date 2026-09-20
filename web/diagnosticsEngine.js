@@ -683,19 +683,24 @@ const DiagEngine = (() => {
     return COMMON_JOBS;
   }
 
-  function relatedJobsFor(subsystems, symptoms, notes, codes) {
-    const hay = ((symptoms || []).join(' ') + ' ' + String(notes || '') + ' ' + (codes || []).join(' ')).toLowerCase();
+  function relatedJobsFor(subsystems, symptoms, notes, codes, mediaSummary) {
+    const media = mediaSummary || {};
+    const mediaHay = [media.audio && media.audio.cue, media.image && media.image.smokeHint, media.video && media.video.smokeHint]
+      .filter(Boolean).join(' ').toLowerCase();
+    const hay = ((symptoms || []).join(' ') + ' ' + String(notes || '') + ' ' + (codes || []).join(' ') + ' ' + mediaHay).toLowerCase();
     const ids = new Set();
     const add = (id) => ids.add(id);
-    if ((subsystems || []).includes('starting_charging') || /no crank|starter/.test(hay)) add('starter');
+    if ((subsystems || []).includes('starting_charging') || /no crank|starter|grind/.test(hay)) add('starter');
     if ((subsystems || []).includes('charging_voltage') || /battery light|alternator|charging/.test(hay)) add('alternator');
+    if ((subsystems || []).includes('belt_drive') || /squeal|belt/.test(hay)) add('alternator');
     if ((subsystems || []).includes('ignition_misfire') || /misfire|spark plug/.test(hay)) add('plugs_wires');
-    if ((subsystems || []).includes('air_fuel') || /injector|p020/.test(hay)) add('injectors');
+    if ((subsystems || []).includes('air_fuel') || /injector|p020|black smoke/.test(hay)) add('injectors');
     if ((subsystems || []).includes('abs_brakes') || /brake|abs/.test(hay)) { add('brakes'); add('brake_fluid'); add('hubs'); }
     if ((subsystems || []).includes('transmission') || /trans|tranny|shift/.test(hay)) add('trans_fluid');
-    if ((subsystems || []).includes('timing_oiling') || /oil leak|valve cover/.test(hay)) { add('oil'); add('valve_cover'); }
+    if ((subsystems || []).includes('timing_oiling') || /oil leak|valve cover|tick|blue smoke/.test(hay)) { add('oil'); add('valve_cover'); }
+    if ((subsystems || []).includes('cooling') || /white smoke|overheat|coolant/.test(hay)) { /* cooling path — no dedicated job yet */ }
+    if ((subsystems || []).includes('emissions_evap') || /exhaust|muffler/.test(hay)) add('exhaust');
     if ((subsystems || []).includes('driveline_chassis') || /hub|axle|control arm/.test(hay)) { add('hubs'); add('control_arms'); add('four_wd_axles'); }
-    if (/exhaust|muffler/.test(hay)) add('exhaust');
     if (/headlight|tail light|lamp/.test(hay)) { add('headlights'); add('tail_lights'); add('vehicle_lights'); }
     if (/stereo|amp|subwoofer|radio/.test(hay)) { add('stereo'); add('amp_sub'); }
     if (/windshield|glass/.test(hay)) add('windshield');
@@ -787,8 +792,11 @@ const DiagEngine = (() => {
     { match: 'No crank', add: [['starting_charging', 28, 'symptom: no crank']] },
     { match: 'Cranks no start', add: [['ignition_misfire', 14, 'symptom: cranks no start'], ['air_fuel', 18, 'symptom: cranks no start'], ['timing_oiling', 8, 'symptom: cranks no start']] },
     { match: 'Hard start', add: [['air_fuel', 14, 'symptom: hard start'], ['charging_voltage', 8, 'symptom: hard start']] },
+    { match: 'Stalling', add: [['air_fuel', 16, 'symptom: stalling'], ['ignition_misfire', 10, 'symptom: stalling']] },
     { match: 'Rough idle', add: [['air_fuel', 14, 'symptom: rough idle'], ['ignition_misfire', 12, 'symptom: rough idle']] },
     { match: 'Misfire', add: [['ignition_misfire', 26, 'symptom: misfire']] },
+    { match: 'Low power', add: [['air_fuel', 14, 'symptom: low power'], ['ignition_misfire', 8, 'symptom: low power']] },
+    { match: 'Poor fuel economy', add: [['air_fuel', 12, 'symptom: poor fuel economy'], ['emissions_evap', 6, 'symptom: poor fuel economy']] },
     { match: 'Overheating', add: [['cooling', 30, 'symptom: overheating']] },
     { match: 'Tick', add: [['timing_oiling', 18, 'symptom: tick']] },
     { match: 'Knock', add: [['timing_oiling', 22, 'symptom: knock'], ['engine_mechanical', 26, 'symptom: knock']] },
@@ -797,12 +805,21 @@ const DiagEngine = (() => {
     { match: 'Burns oil', add: [['engine_mechanical', 28, 'symptom: burns oil'], ['timing_oiling', 10, 'symptom: burns oil']] },
     { match: 'Needs engine rebuild', add: [['engine_mechanical', 42, 'symptom: needs engine rebuild']] },
     { match: 'Squeal', add: [['belt_drive', 18, 'symptom: squeal']] },
+    { match: 'Hiss', add: [['air_fuel', 14, 'symptom: hiss'], ['emissions_evap', 8, 'symptom: hiss']] },
+    { match: 'Whine', add: [['belt_drive', 12, 'symptom: whine'], ['transmission', 10, 'symptom: whine'], ['charging_voltage', 8, 'symptom: whine']] },
+    { match: 'Grind', add: [['starting_charging', 16, 'symptom: grind'], ['driveline_chassis', 12, 'symptom: grind']] },
+    { match: 'Smoke', add: [['air_fuel', 10, 'symptom: smoke'], ['cooling', 8, 'symptom: smoke'], ['engine_mechanical', 8, 'symptom: smoke']] },
+    { match: 'Fuel smell', add: [['air_fuel', 20, 'symptom: fuel smell'], ['emissions_evap', 10, 'symptom: fuel smell']] },
+    { match: 'Oil leak', add: [['timing_oiling', 16, 'symptom: oil leak']] },
+    { match: 'Coolant loss', add: [['cooling', 22, 'symptom: coolant loss']] },
+    { match: 'Electrical weirdness', add: [['network', 18, 'symptom: electrical weirdness'], ['body_electrical', 16, 'symptom: electrical weirdness'], ['charging_voltage', 14, 'symptom: electrical weirdness']] },
+    { match: 'Transmission slip', add: [['transmission', 30, 'symptom: transmission slip']] },
+    { match: "Won’t shift", add: [['transmission', 28, 'symptom: won’t shift']] },
+    { match: 'ABS / brake issue', add: [['abs_brakes', 24, 'symptom: ABS / brake issue']] },
     { match: 'Charging problem', add: [['charging_voltage', 24, 'symptom: charging problem']] },
     { match: 'Battery light', add: [['charging_voltage', 28, 'symptom: battery light']] },
-    { match: 'Transmission slip', add: [['transmission', 30, 'symptom: transmission slip']] },
-    { match: 'ABS / brake issue', add: [['abs_brakes', 24, 'symptom: ABS / brake issue']] },
-    { match: 'Electrical weirdness', add: [['network', 18, 'symptom: electrical weirdness'], ['body_electrical', 16, 'symptom: electrical weirdness'], ['charging_voltage', 14, 'symptom: electrical weirdness']] },
-    { match: 'No heat', add: [['cooling', 14, 'symptom: no heat']] }
+    { match: 'No heat', add: [['cooling', 14, 'symptom: no heat']] },
+    { match: 'Gauge acting weird', add: [['body_electrical', 12, 'symptom: gauge acting weird'], ['charging_voltage', 10, 'symptom: gauge acting weird'], ['network', 8, 'symptom: gauge acting weird']] }
   ];
 
   const SUBSYSTEM_LABELS = {
@@ -897,18 +914,172 @@ const DiagEngine = (() => {
     const image = mediaSummary.image || {};
     const video = mediaSummary.video || {};
     const cues = [audio.cue, image.smokeHint, video.smokeHint].filter(Boolean).join(' | ').toLowerCase();
-    if (cues.includes('knock')) {
+    if (!cues.trim()) return;
+    if (cues.includes('knock') || cues.includes('thump')) {
       scoreBucket(scores, 'engine_mechanical', 26, 'media: knock-like cue');
       scoreBucket(scores, 'timing_oiling', 16, 'media: knock-like cue');
     }
     if (cues.includes('tick')) scoreBucket(scores, 'timing_oiling', 18, 'media: tick-like cue');
-    if (cues.includes('squeal')) scoreBucket(scores, 'belt_drive', 22, 'media: squeal-like cue');
-    if (cues.includes('white smoke')) scoreBucket(scores, 'cooling', 24, 'media: white smoke / steam cue');
-    if (cues.includes('blue smoke')) {
+    if (cues.includes('squeal') || cues.includes('high-frequency')) scoreBucket(scores, 'belt_drive', 22, 'media: squeal-like cue');
+    if (cues.includes('white smoke') || cues.includes('steam')) scoreBucket(scores, 'cooling', 24, 'media: white smoke / steam cue');
+    if (cues.includes('blue smoke') || cues.includes('oil-burning')) {
       scoreBucket(scores, 'engine_mechanical', 20, 'media: blue smoke cue');
       scoreBucket(scores, 'timing_oiling', 12, 'media: blue smoke cue');
     }
-    if (cues.includes('black smoke')) scoreBucket(scores, 'air_fuel', 24, 'media: black smoke cue');
+    if (cues.includes('black smoke') || cues.includes('dark exhaust')) scoreBucket(scores, 'air_fuel', 24, 'media: black smoke cue');
+    if (cues.includes('broad mechanical')) {
+      scoreBucket(scores, 'timing_oiling', 10, 'media: broad mechanical noise');
+      scoreBucket(scores, 'belt_drive', 6, 'media: broad mechanical noise');
+    }
+    if (cues.includes('very quiet') || cues.includes('weak signal') || cues.includes('no strong smoke')) {
+      /* weak media — do not invent a fault */
+    }
+  }
+
+  function resolveOutcome(analysis) {
+    const ranked = (analysis && analysis.rankedHypotheses) || [];
+    const primary = ranked[0];
+    const secondary = ranked[1];
+    const codeCards = (analysis && analysis.codeCards) || [];
+    const jobs = (analysis && analysis.relatedJobs) || [];
+    const confidence = (analysis && analysis.summary && analysis.summary.confidence) || (primary && primary.confidence) || 0;
+    const score = primary ? primary.score : 0;
+    const gap = primary && secondary ? primary.score - secondary.score : score;
+
+    if (analysis && analysis.rebuildGuide) {
+      return {
+        kind: 'rebuild',
+        id: 'engine_rebuild',
+        title: analysis.summary.primaryFinding,
+        confidence,
+        reason: analysis.summary.shortReason,
+        instructionTitle: analysis.diyTitle,
+        instructions: analysis.diySteps || [],
+        firstChecks: analysis.firstChecks || [],
+        likelyParts: analysis.likelyParts || [],
+        warnings: analysis.warnings || [],
+        playbook: analysis.rebuildGuide,
+        relatedJobs: jobs.slice(0, 3),
+        codeCards: codeCards.slice(0, 3)
+      };
+    }
+
+    if (!primary || score < 24) {
+      return {
+        kind: 'needs_more_evidence',
+        id: 'needs_more_evidence',
+        title: 'Need more evidence',
+        confidence: Math.max(confidence, 35),
+        reason: 'Listen with the mic, capture exhaust or under-hood with the camera, and/or enter a scanner code, then diagnose again.',
+        instructionTitle: 'What to capture next',
+        instructions: [
+          'Record 10–20 seconds of engine noise at idle (knock, tick, squeal).',
+          'Point the camera at the exhaust while someone revs lightly, or at the belt area if it squeals.',
+          'If you have an OBD scanner code (example P0300), enter it and diagnose again.',
+          'Add one clear symptom chip if you already know what the truck is doing.'
+        ],
+        firstChecks: checksFor('general'),
+        likelyParts: [],
+        warnings: [],
+        playbook: null,
+        relatedJobs: [],
+        codeCards: codeCards.slice(0, 3)
+      };
+    }
+
+    if (codeCards.length === 1 && codeCards[0].guidance && codeCards[0].guidance.diySteps && codeCards[0].guidance.diySteps.length) {
+      const card = codeCards[0];
+      return {
+        kind: 'code',
+        id: card.code,
+        title: card.code + ' — ' + card.description,
+        confidence,
+        reason: analysis.summary.shortReason,
+        instructionTitle: card.guidance.title || card.description,
+        instructions: card.guidance.diySteps,
+        firstChecks: card.guidance.firstChecks || analysis.firstChecks || [],
+        likelyParts: card.guidance.likelyParts || analysis.likelyParts || [],
+        warnings: (card.guidance.warnings || []).concat(analysis.warnings || []).slice(0, 8),
+        playbook: null,
+        relatedJobs: jobs.slice(0, 2),
+        codeCards: [card]
+      };
+    }
+
+    if (codeCards.length > 1 && codeCards[0].guidance && codeCards[0].guidance.diySteps && codeCards[0].guidance.diySteps.length) {
+      const card = codeCards[0];
+      return {
+        kind: 'code',
+        id: card.code,
+        title: card.code + ' — ' + card.description,
+        confidence,
+        reason: 'Leading scanner code among ' + codeCards.length + ' entered codes. ' + (analysis.summary.shortReason || ''),
+        instructionTitle: card.guidance.title || card.description,
+        instructions: card.guidance.diySteps,
+        firstChecks: card.guidance.firstChecks || analysis.firstChecks || [],
+        likelyParts: card.guidance.likelyParts || analysis.likelyParts || [],
+        warnings: analysis.warnings || [],
+        playbook: null,
+        relatedJobs: jobs.slice(0, 2),
+        codeCards: codeCards.slice(0, 5)
+      };
+    }
+
+    const jobBuckets = { starting_charging: 'starter', charging_voltage: 'alternator', belt_drive: 'alternator', abs_brakes: 'brakes' };
+    const preferredJobId = jobBuckets[primary.bucket];
+    const preferredJob = preferredJobId ? jobs.find((job) => job.id === preferredJobId) : null;
+    if (preferredJob && gap >= 6 && score >= 28) {
+      return {
+        kind: 'job',
+        id: preferredJob.id,
+        title: preferredJob.title,
+        confidence,
+        reason: analysis.summary.shortReason,
+        instructionTitle: preferredJob.title,
+        instructions: preferredJob.steps || [],
+        firstChecks: analysis.firstChecks || [],
+        likelyParts: preferredJob.parts || analysis.likelyParts || [],
+        warnings: preferredJob.warnings || analysis.warnings || [],
+        playbook: preferredJob,
+        relatedJobs: jobs.filter((job) => job.id !== preferredJob.id).slice(0, 2),
+        codeCards: codeCards.slice(0, 3)
+      };
+    }
+
+    if (jobs.length === 1 && gap >= 8 && score >= 30) {
+      const job = jobs[0];
+      return {
+        kind: 'job',
+        id: job.id,
+        title: job.title,
+        confidence,
+        reason: analysis.summary.shortReason,
+        instructionTitle: job.title,
+        instructions: job.steps || [],
+        firstChecks: analysis.firstChecks || [],
+        likelyParts: job.parts || analysis.likelyParts || [],
+        warnings: job.warnings || analysis.warnings || [],
+        playbook: job,
+        relatedJobs: [],
+        codeCards: codeCards.slice(0, 3)
+      };
+    }
+
+    return {
+      kind: 'subsystem',
+      id: primary.bucket,
+      title: primary.title,
+      confidence,
+      reason: analysis.summary.shortReason,
+      instructionTitle: analysis.diyTitle || primary.title,
+      instructions: analysis.diySteps || primary.diySteps || [],
+      firstChecks: analysis.firstChecks || primary.firstChecks || [],
+      likelyParts: analysis.likelyParts || primary.likelyParts || [],
+      warnings: analysis.warnings || [],
+      playbook: null,
+      relatedJobs: jobs.slice(0, 2),
+      codeCards: codeCards.slice(0, 3)
+    };
   }
 
   function applyNoteRules(scores, notes) {
@@ -1055,7 +1226,7 @@ const DiagEngine = (() => {
     const warningList = warningsFor(topSubsystems, codes);
     if (rebuildIndicated) ENGINE_REBUILD.warnings.forEach((line) => warningList.push(line));
 
-    return {
+    const analysis = {
       generatedAt: new Date().toISOString(),
       dbStats: computeStats(dtcDb),
       vehicle: input.vehicle || {},
@@ -1072,7 +1243,7 @@ const DiagEngine = (() => {
       diyTitle,
       diySteps: primaryDiy,
       rebuildGuide: rebuildIndicated ? ENGINE_REBUILD : null,
-      relatedJobs: relatedJobsFor(topSubsystems, symptoms, notes, codes),
+      relatedJobs: relatedJobsFor(topSubsystems, symptoms, notes, codes, mediaSummary),
       warnings: warningList,
       codeCards: detailedCodeCards,
       disclaimers: [
@@ -1083,6 +1254,8 @@ const DiagEngine = (() => {
         'Without a compatible vehicle interface, the app cannot directly read live ECU data from the OBD port.'
       ]
     };
+    analysis.outcome = resolveOutcome(analysis);
+    return analysis;
   }
 
   function listRepairPlaybooks() {
@@ -1120,7 +1293,7 @@ const DiagEngine = (() => {
     return Array.from(seen.values());
   }
 
-  return { APP_VERSION, computeStats, searchDtc, lookupCodes, buildAnalysis, listRepairPlaybooks, diyStepsFor, engineRebuildGuide, listCommonJobs };
+  return { APP_VERSION, computeStats, searchDtc, lookupCodes, buildAnalysis, resolveOutcome, listRepairPlaybooks, diyStepsFor, engineRebuildGuide, listCommonJobs };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = DiagEngine;

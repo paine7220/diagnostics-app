@@ -44,11 +44,14 @@ check('button ids used by app.js exist in index.html', () => {
     'btnAudioRecord', 'btnAudioUpload', 'btnStartCamera', 'btnVideoUpload',
     'btnCaptureFrame', 'btnStopCamera', 'btnPhotoUpload', 'acceptLegal',
     'codes', 'dbQuery', 'results', 'fluidOut', 'appVersion', 'solutionQuery', 'allSolutions', 'rebuildCard', 'rebuildStages', 'jobsCard', 'jobQuery', 'commonJobs',
-    'computerCard', 'computerStatus'
+    'computerCard', 'computerStatus', 'listenPanel', 'lookPanel', 'statusBanner'
   ];
   for (const id of ids) {
     assert.ok(indexHtml.includes(`id="${id}"`), 'missing id ' + id);
   }
+  assert.match(indexHtml, /Capture evidence/);
+  assert.match(indexHtml, /Diagnose now/);
+  assert.match(indexHtml, /Diagnosis &amp; instructions|Diagnosis & instructions/);
 });
 
 check('computer transfer launchers and docs exist', () => {
@@ -136,6 +139,25 @@ check('DiagEngine lookup and analysis for P0300', () => {
   assert.ok(analysis.summary.primaryFinding);
   assert.ok(analysis.codeCards.some((card) => card.code === 'P0300' && /Random\/Multiple/.test(card.description)));
   assert.ok(analysis.warnings.some((line) => /misfire/i.test(line)));
+  assert.ok(analysis.outcome, 'analysis should include outcome');
+  assert.strictEqual(analysis.outcome.kind, 'code');
+  assert.strictEqual(analysis.outcome.id, 'P0300');
+  assert.ok(analysis.outcome.instructions && analysis.outcome.instructions.length > 3);
+  const mediaOnly = engine.buildAnalysis({
+    vehicle: {},
+    dtcs: [],
+    symptoms: [],
+    notes: '',
+    fluid: {},
+    mediaSummary: { audio: { cue: 'possible knock / thump' }, image: {}, video: {} }
+  }, sandbox.window.DTC_DB_DATA);
+  assert.ok(mediaOnly.outcome);
+  assert.ok(['rebuild', 'subsystem'].includes(mediaOnly.outcome.kind), 'knock media should resolve to mechanical/subsystem path');
+  assert.ok(mediaOnly.outcome.instructions.length > 0);
+  const empty = engine.buildAnalysis({
+    vehicle: {}, dtcs: [], symptoms: [], notes: '', fluid: {}, mediaSummary: {}
+  }, sandbox.window.DTC_DB_DATA);
+  assert.strictEqual(empty.outcome.kind, 'needs_more_evidence');
 });
 
 check('every bundled DTC has DIY steps', () => {
@@ -276,7 +298,18 @@ check('app.js talks to DiagEngine and DTC_DB_DATA', () => {
   assert.match(appSrc, /DiagEngine\.buildAnalysis/);
   assert.match(appSrc, /DiagEngine\.engineRebuildGuide/);
   assert.match(appSrc, /DiagEngine\.listCommonJobs/);
+  assert.match(appSrc, /maybeAutoDiagnose/);
   assert.match(appSrc, /1\.2\.0/);
+});
+
+check('diagnose-first UI gates instructions behind outcome', () => {
+  assert.match(indexHtml, /Capture evidence/);
+  assert.match(indexHtml, /Start listening/);
+  assert.match(indexHtml, /Open camera/);
+  assert.match(appSrc, /outcome\.kind/);
+  assert.match(appSrc, /needs_more_evidence/);
+  assert.match(engineSrc, /function resolveOutcome/);
+  assert.match(engineSrc, /needs_more_evidence/);
 });
 
 check('no CDI Genius module', () => {

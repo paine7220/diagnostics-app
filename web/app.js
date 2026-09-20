@@ -48,7 +48,7 @@ function loadStats(){
   const stats = DiagEngine.computeStats(state.dtcDb);
   html('dbStats', `
     <div class="stat"><strong>${stats.total.toLocaleString()}</strong><div class="small">Codes ready offline</div></div>
-    <div class="stat"><strong>v${esc(APP_VERSION)}</strong><div class="small">This build</div></div>
+    <div class="stat"><strong>Mic + cam</strong><div class="small">Diagnose first</div></div>
     <div class="stat"><strong>${stats.byFamily.Powertrain || 0}</strong><div class="small">Powertrain</div></div>
     <div class="stat"><strong>${stats.byFamily.Body || 0}</strong><div class="small">Body</div></div>
     <div class="stat"><strong>${stats.byFamily.Chassis || 0}</strong><div class="small">Chassis</div></div>
@@ -194,7 +194,28 @@ function useExampleCode(code){
   const field = byId('codes');
   if(!field) return;
   field.value = code;
-  quickLookup();
+  if(byId('acceptLegal') && byId('acceptLegal').checked) runDiagnosis();
+  else {
+    quickLookup();
+    showStatus('Code loaded. Check the legal box, then tap Diagnose now for the full repair plan.', 'warn');
+  }
+}
+
+function maybeAutoDiagnose(source){
+  const legal = byId('acceptLegal');
+  if(!legal || !legal.checked){
+    showStatus('Evidence captured from ' + source + '. Check the legal box, then tap Diagnose now.', 'warn');
+    return;
+  }
+  const hasMedia = !!(state.audioSummary || state.imageSummary);
+  const hasCodes = parseCodes().length > 0;
+  const hasSymptoms = checkedSymptoms().length > 0 || rebuildFlagSymptoms().length > 0;
+  if(!hasMedia && !hasCodes && !hasSymptoms){
+    showStatus('Add sound, a photo, a code, or a symptom before diagnosing.', 'warn');
+    return;
+  }
+  showStatus('Running diagnosis from ' + source + '…', 'ok');
+  runDiagnosis();
 }
 
 function searchLocalDb(){
@@ -252,9 +273,9 @@ function clearCase(){
   state.imageSummary = null;
   html('codeResults', '');
   text('fluidOut', 'Fluid guidance will show here.');
-  text('audioSummary', 'No audio analyzed yet.');
-  text('imageSummary', 'No frame/image analyzed yet.');
-  html('results', 'Nothing yet. Enter a code above, then tap <strong>Quick Lookup</strong>.');
+  text('audioSummary', 'No audio yet.');
+  text('imageSummary', 'No photo or frame yet.');
+  html('results', 'Nothing yet. Capture sound or a photo, or enter a code, then tap <strong>Diagnose now</strong>.');
   showStatus('Saved case cleared.', 'ok');
 }
 
@@ -380,9 +401,11 @@ async function analyzeAudioBuffer(buffer){
     };
     state.audioSummary = summary;
     text('audioSummary', `Audio summary: ${summary.durationSec}s | RMS ${summary.rms} | ZCR ${summary.zeroCrossRate} | cue: ${summary.cue}`);
+    maybeAutoDiagnose('microphone');
   }catch(err){
     text('audioSummary', 'Audio loaded, but browser decoding failed for deeper analysis.');
     state.audioSummary = { cue:'audio loaded but deeper decode unavailable' };
+    maybeAutoDiagnose('microphone');
   }
 }
 
@@ -414,6 +437,7 @@ function imageMetricsFromCanvas(canvas){
   const summary = { whiteRatio: ratio(white), blueRatio: ratio(blue), darkRatio: ratio(dark), hotRatio: ratio(hot), smokeHint };
   state.imageSummary = summary;
   text('imageSummary', `Image summary: white ${summary.whiteRatio} | blue ${summary.blueRatio} | dark ${summary.darkRatio} | cue: ${summary.smokeHint}`);
+  maybeAutoDiagnose('camera');
   return summary;
 }
 
@@ -554,53 +578,93 @@ async function runDiagnosis(){
 function renderAnalysis(analysis){
   state.lastAnalysisText = analysisToText(analysis);
   const v = analysis.vehicle || {};
-  const vehicleLine = [v.year, v.make, v.model, v.engine, v.nickname].filter(Boolean).join(' ') || 'Vehicle details not entered';
-  const hypos = (analysis.rankedHypotheses || []).map((item, i) => `
-    <div class="hypo">
-      <div><strong>${i+1}. ${esc(item.title)}</strong> <span class="badge">${esc(item.confidence)}%</span></div>
-      <div class="small mt-6">Evidence: ${esc((item.reasons || []).join(' | '))}</div>
-    </div>
-  `).join('') || '<div class="small">Not enough hard evidence yet. Add codes, symptoms, fluid notes, or media cues.</div>';
-  const list = (items) => (items || []).map(x => `<li>${esc(x)}</li>`).join('') || '<li>None listed.</li>';
-  const cards = (analysis.codeCards || []).map(card => `
+  const vehicleLine = [v.year, v.make, v.model, v.engine, v.nickname].filter(Boolean).join(' ') || '';
+  const outcome = analysis.outcome || (typeof DiagEngine !== 'undefined' && DiagEngine.resolveOutcome ? DiagEngine.resolveOutcome(analysis) : null);
+  const evidence = [];
+  if(state.audioSummary && state.audioSummary.cue) evidence.push('Mic: ' + state.audioSummary.cue);
+  if(state.imageSummary && state.imageSummary.smokeHint) evidence.push('Camera: ' + state.imageSummary.smokeHint);
+  (analysis.codeCards || []).slice(0, 3).forEach((card) => evidence.push('Code: ' + card.code + ' — ' + card.description));
+  (analysis.rankedHypotheses || []).slice(0, 2).forEach((h) => {
+    if(h.reasons && h.reasons[0]) evidence.push(h.reasons[0]);
+  });
+  const list = (items) => (items || []).map(x => `<li>${esc(x)}</li>`).join('') || '<li>None listed for this finding.</li>';
+
+  if(!outcome || outcome.kind === 'needs_more_evidence'){
+    html('results', `
+      <div class="outcome-banner">
+        <div class="kind">Need more evidence</div>
+        <h3>${esc((outcome && outcome.title) || 'Need more evidence')}</h3>
+        <div class="small">${esc((outcome && outcome.reason) || (analysis.summary && analysis.summary.shortReason) || '')}</div>
+        ${vehicleLine ? `<div class="small mt-6">${esc(vehicleLine)}</div>` : ''}
+      </div>
+      <div class="result-block"><h3>What to capture next</h3><ol class="checks diy-list">${list((outcome && outcome.instructions) || [])}</ol></div>
+      ${evidence.length ? `<div class="result-block"><h3>Evidence so far</h3><ul class="evidence-list">${evidence.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    `);
+    showEl('resultsCard');
+    showStatus('Not enough to pick a repair plan yet — add mic, camera, or a code.', 'warn');
+    return;
+  }
+
+  const relatedJobs = (outcome.relatedJobs || []).map((job) => `
+    <details class="playbook" id="result-job-${esc(job.id)}">
+      <summary>${esc(job.title)} <span class="small">(related to this diagnosis)</span></summary>
+      ${job.time ? `<div class="small mt-8"><strong>Typical time:</strong> ${esc(job.time)}</div>` : ''}
+      ${job.tools && job.tools.length ? `<div class="small mt-8"><strong>Tools:</strong> ${esc(job.tools.join(', '))}</div>` : ''}
+      ${job.parts && job.parts.length ? `<div class="small mt-8"><strong>Parts:</strong> ${esc(job.parts.join(', '))}</div>` : ''}
+      ${job.warnings && job.warnings.length ? `<div class="notice mt-8">${job.warnings.map((w) => esc(w)).join(' ')}</div>` : ''}
+      <ol class="checks diy-list mt-8">${(job.steps || []).map((step) => `<li>${esc(step)}</li>`).join('')}</ol>
+    </details>
+  `).join('');
+
+  let rebuildHtml = '';
+  if(outcome.kind === 'rebuild' && outcome.playbook && outcome.playbook.stages){
+    rebuildHtml = `<div class="result-block"><h3>Engine rebuild stages</h3>${(outcome.playbook.stages || []).map((stage, idx) => `
+      <details class="playbook"${idx === 0 ? ' open' : ''}>
+        <summary>${esc(stage.title)}</summary>
+        <ol class="checks diy-list">${(stage.steps || []).map((step) => `<li>${esc(step)}</li>`).join('')}</ol>
+      </details>
+    `).join('')}</div>`;
+  }
+
+  const otherCodes = (outcome.codeCards || []).slice(outcome.kind === 'code' ? 1 : 0).map((card) => `
     <div class="code-card">
       <div><span class="badge">${esc(card.code)}</span><span class="badge">${esc(card.family || '')}</span></div>
       <div><strong>${esc(card.description)}</strong></div>
-      ${card.guidance ? `<div class="small mt-8"><strong>${esc(card.guidance.title || 'Guidance')}</strong></div>
-      ${card.guidance.diySteps && card.guidance.diySteps.length ? `<ol class="checks mt-8">${card.guidance.diySteps.map(step => `<li>${esc(step)}</li>`).join('')}</ol>` : `<div class="small mt-8">First checks: ${esc((card.guidance.firstChecks || []).join(' | '))}</div>`}` : ''}
     </div>
   `).join('');
+
   html('results', `
-    <div class="result-block">
-      <h3>Primary finding</h3>
-      <div><strong>${esc(analysis.summary.primaryFinding)}</strong> <span class="badge">${esc(analysis.summary.confidence)}%</span></div>
-      <div class="small mt-6">${esc(analysis.summary.shortReason)}</div>
-      <div class="small mt-6">${esc(vehicleLine)}</div>
+    <div class="outcome-banner">
+      <div class="kind">${esc(outcome.kind)}</div>
+      <h3>${esc(outcome.title)}</h3>
+      <div><span class="badge">${esc(outcome.confidence)}%</span> <span class="small">${esc(outcome.reason || '')}</span></div>
+      ${vehicleLine ? `<div class="small mt-6">${esc(vehicleLine)}</div>` : ''}
     </div>
-    <div class="result-block"><h3>DIY repair steps${analysis.diyTitle ? ' — ' + esc(analysis.diyTitle) : ''}</h3><ol class="checks diy-list">${list(analysis.diySteps)}</ol></div>
-    ${analysis.rebuildGuide ? `<div class="result-block"><h3>Engine rebuild</h3><div class="small">${esc(analysis.rebuildGuide.summary || '')}</div><p class="small mt-8"><a href="#rebuildCard">Open the full rebuild stages</a></p></div>` : ''}
-    ${analysis.relatedJobs && analysis.relatedJobs.length ? `<div class="result-block"><h3>Related how-to jobs</h3>${analysis.relatedJobs.map((job) => `<p class="small mt-8"><a href="#job-${esc(job.id)}" data-job="${esc(job.id)}">${esc(job.title)}</a></p>`).join('')}</div>` : ''}
-    <div class="result-block"><h3>Top ranked causes</h3>${hypos}</div>
-    <div class="result-block"><h3>First checks</h3><ol class="checks">${list(analysis.firstChecks)}</ol></div>
-    <div class="result-block"><h3>Likely parts / paths</h3><ol class="checks">${list(analysis.likelyParts)}</ol></div>
-    ${(analysis.warnings || []).length ? `<div class="result-block"><h3>Warnings</h3><ol class="checks warn-list">${list(analysis.warnings)}</ol></div>` : ''}
-    ${cards ? `<div class="result-block"><h3>Code cards</h3><div class="cards">${cards}</div></div>` : ''}
+    ${evidence.length ? `<div class="result-block"><h3>Evidence used</h3><ul class="evidence-list">${evidence.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    <div class="result-block"><h3>Repair instructions — ${esc(outcome.instructionTitle || outcome.title)}</h3><ol class="checks diy-list">${list(outcome.instructions)}</ol></div>
+    ${rebuildHtml}
+    ${(outcome.firstChecks || []).length ? `<div class="result-block"><h3>First checks</h3><ol class="checks">${list(outcome.firstChecks)}</ol></div>` : ''}
+    ${(outcome.likelyParts || []).length ? `<div class="result-block"><h3>Likely parts / paths</h3><ol class="checks">${list(outcome.likelyParts)}</ol></div>` : ''}
+    ${(outcome.warnings || []).length ? `<div class="result-block"><h3>Warnings</h3><ol class="checks warn-list">${list(outcome.warnings)}</ol></div>` : ''}
+    ${relatedJobs ? `<div class="result-block"><h3>Related jobs for this diagnosis only</h3>${relatedJobs}</div>` : ''}
+    ${otherCodes ? `<div class="result-block"><h3>Other codes in this case</h3><div class="cards">${otherCodes}</div></div>` : ''}
     <div class="result-block"><h3>Disclaimers</h3><ol class="checks">${list(analysis.disclaimers)}</ol></div>
   `);
   showEl('resultsCard');
+  showStatus('Diagnosis ready: ' + outcome.title, 'ok');
 }
 
 function bindEvents(){
   byId('btnLookup').onclick = quickLookup;
-  byId('btnLookupTop').onclick = () => { showEl('lookupCard'); const field = byId('codes'); if(field) field.focus(); };
+  byId('btnLookupTop').onclick = () => { showEl('listenPanel'); const btn = byId('btnAudioRecord'); if(btn) btn.focus(); };
   byId('btnSearchDtc').onclick = searchLocalDb;
   byId('btnClearCodes').onclick = () => { byId('codes').value = ''; html('codeResults',''); showStatus(''); };
   byId('btnRunDiagnosis').onclick = runDiagnosis;
   byId('btnRunDiagnosisTop').onclick = runDiagnosis;
   const rebuildBtn = byId('btnRebuildTop');
-  if(rebuildBtn) rebuildBtn.onclick = () => { renderRebuildGuide(); showEl('rebuildCard'); };
+  if(rebuildBtn) rebuildBtn.onclick = () => { showEl('lookupCard'); const field = byId('codes'); if(field){ field.focus(); field.scrollIntoView({ behavior:'smooth', block:'center' }); } };
   const jobsBtn = byId('btnJobsTop');
-  if(jobsBtn) jobsBtn.onclick = () => { renderCommonJobs(); showEl('jobsCard'); };
+  if(jobsBtn) jobsBtn.onclick = () => { showEl('lookPanel'); const btn = byId('btnStartCamera'); if(btn) btn.focus(); };
   const computerBtn = byId('btnComputerTop');
   if(computerBtn) computerBtn.onclick = () => showEl('computerCard');
   const rebuildDiag = byId('btnRebuildDiagnosis');
@@ -619,7 +683,7 @@ function bindEvents(){
     codesField.addEventListener('keydown', (e) => {
       if(e.key === 'Enter' && !e.shiftKey){
         e.preventDefault();
-        quickLookup();
+        runDiagnosis();
       }
     });
   }
@@ -760,19 +824,21 @@ async function init(){
   loadStats();
   if(window.ATD_DESKTOP){
     const status = byId('computerStatus');
-    if(status) status.textContent = 'This is already the computer copy. Same codes, rebuild path, and how-to jobs as the phone page.';
+    if(status) status.textContent = 'This is already the computer copy. Same diagnose-first camera/mic flow as the phone page.';
   }
-  renderAllSolutions();
-  renderRebuildGuide();
-  renderCommonJobs();
-  document.querySelectorAll('details.extra').forEach((el) => {
-    el.open = window.innerWidth >= 900;
-  });
+  // Browse libraries stay collapsed — diagnosis pulls only what is needed.
+  document.querySelectorAll('details.extra, details.collapsible').forEach((el) => { el.open = false; });
+  const jobsCard = byId('jobsCard');
+  if(jobsCard){
+    jobsCard.addEventListener('toggle', () => { if(jobsCard.open) renderCommonJobs(); });
+  }
+  const rebuildCard = byId('rebuildCard');
+  if(rebuildCard){
+    rebuildCard.addEventListener('toggle', () => { if(rebuildCard.open) renderRebuildGuide(); });
+  }
   const solutionsWrap = byId('solutionsCardWrap');
   if(solutionsWrap){
-    solutionsWrap.addEventListener('toggle', () => {
-      if(solutionsWrap.open) renderAllSolutions();
-    }, { once: false });
+    solutionsWrap.addEventListener('toggle', () => { if(solutionsWrap.open) renderAllSolutions(); });
   }
 }
 

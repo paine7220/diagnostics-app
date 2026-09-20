@@ -15,10 +15,10 @@
 </head>
 <body>
   <div class="topbar" role="navigation" aria-label="Main actions">
-    <button id="btnLookupTop">Look up code</button>
     <button class="warn" id="btnRunDiagnosisTop">Diagnose</button>
-    <button id="btnJobsTop">How-to</button>
-    <button id="btnRebuildTop">Rebuild</button>
+    <button id="btnLookupTop">Listen</button>
+    <button id="btnJobsTop">Look</button>
+    <button id="btnRebuildTop">Code</button>
     <button class="good topbar-extra" id="btnSaveCaseTop">Save</button>
     <button class="secondary topbar-extra" id="btnExportTop">Export</button>
     <button class="secondary topbar-extra" id="btnComputerTop">Computer</button>
@@ -26,11 +26,11 @@
   <div class="wrap">
     <div class="hero">
       <h1>Auto/Truck Diagnostics for Dummies <span class="ver" id="appVersion">v1.2.0</span></h1>
-      <div class="sub">Enter the code from your scanner. Get plain-English meaning and driveway repair steps.</div>
+      <div class="sub">Use the microphone and camera. The app diagnoses what is wrong, then shows only the repair steps for that finding.</div>
       <div class="stats" id="dbStats"></div>
       <div class="acceptance">
         <input type="checkbox" id="acceptLegal">
-        <div>I know this is an assistant, not a guaranteed repair. <span class="small">(Saved on this phone after you check it once.)</span></div>
+        <div>I know this is an assistant, not a guaranteed repair. <span class="small">(Saved on this device after one check.)</span></div>
       </div>
     </div>
 
@@ -38,50 +38,93 @@
 
     <div class="stack mt-14">
       <section class="card primary-card" id="lookupCard">
-        <h2>1. Look up a code</h2>
-        <p class="lead">Type or paste what your OBD reader shows. Example: <strong>P0300</strong></p>
-        <label for="codes">Trouble code(s)</label>
+        <h2>1. Capture evidence</h2>
+        <p class="lead">Listen to the engine, look at exhaust or under-hood, then diagnose. Optional scanner codes sharpen the result.</p>
+
+        <div class="capture-grid">
+          <div class="capture-panel" id="listenPanel">
+            <h3>Listen</h3>
+            <p class="small">Record idle knock, tick, squeal, or grind (10–20 seconds).</p>
+            <div class="row">
+              <button id="btnAudioRecord">Start listening</button>
+              <button class="secondary" id="btnAudioUpload">Upload audio</button>
+            </div>
+            <input type="file" id="audioFile" accept="audio/*" hidden>
+            <audio id="audioPreview" controls class="full-w mt-8"></audio>
+            <div class="small" id="audioSummary">No audio yet.</div>
+          </div>
+
+          <div class="capture-panel" id="lookPanel">
+            <h3>Look</h3>
+            <p class="small">Point at exhaust smoke or the belt/pulley area, then capture a frame.</p>
+            <div class="row">
+              <button id="btnStartCamera">Open camera</button>
+              <button class="secondary" id="btnCaptureFrame">Capture frame</button>
+            </div>
+            <div class="row mt-8">
+              <button class="secondary" id="btnStopCamera">Stop camera</button>
+              <button class="secondary" id="btnPhotoUpload">Upload photo</button>
+              <button class="secondary" id="btnVideoUpload">Upload video</button>
+            </div>
+            <input type="file" id="photoFile" accept="image/*" hidden>
+            <input type="file" id="videoFile" accept="video/*" hidden>
+            <video id="videoPreview" playsinline muted controls class="mt-8"></video>
+            <canvas id="frameCanvas" hidden></canvas>
+            <img id="frameImage" hidden alt="Captured frame" class="mt-8">
+            <img id="photoPreview" hidden alt="Photo evidence" class="mt-8">
+            <div class="small" id="imageSummary">No photo or frame yet.</div>
+          </div>
+        </div>
+
+        <label for="codes">Scanner code (optional)</label>
         <textarea id="codes" placeholder="P0300" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></textarea>
         <div class="chip-row" id="exampleCodes" aria-label="Example codes">
-          <button type="button" class="chip" data-code="P0300">P0300 misfire</button>
-          <button type="button" class="chip" data-code="P0420">P0420 catalyst</button>
-          <button type="button" class="chip" data-code="P0171">P0171 lean</button>
-          <button type="button" class="chip" data-code="P0301">P0301 cyl 1</button>
-        </div>
-        <div class="row primary-actions">
-          <button id="btnLookup">Quick Lookup</button>
-          <button class="warn" id="btnRunDiagnosis">Full Diagnosis</button>
+          <button type="button" class="chip" data-code="P0300">P0300</button>
+          <button type="button" class="chip" data-code="P0420">P0420</button>
+          <button type="button" class="chip" data-code="P0171">P0171</button>
+          <button type="button" class="chip" data-code="P0301">P0301</button>
         </div>
         <div class="row secondary-actions">
+          <button class="secondary" id="btnLookup">Code-only lookup</button>
           <button class="secondary" id="btnSearchDtc">Search words</button>
-          <button class="secondary" id="btnClearCodes">Clear</button>
+          <button class="secondary" id="btnClearCodes">Clear code</button>
         </div>
-        <label for="dbQuery">Or search a word</label>
+        <label for="dbQuery">Search a word (optional)</label>
         <input id="dbQuery" placeholder="thermostat, misfire, starter">
         <div id="codeResults" class="cards mt-10"></div>
+
+        <h3 class="mt-14">Quick symptoms (optional)</h3>
+        <div class="symptoms" id="symptoms"></div>
+        <label for="notes">Notes</label>
+        <textarea id="notes" placeholder="Stalls warm, fuel smell, battery light on."></textarea>
+
+        <div class="row primary-actions mt-10">
+          <button class="warn" id="btnRunDiagnosis">Diagnose now</button>
+        </div>
+        <p class="small mt-8">Repair instructions appear below only after diagnosis decides what is needed.</p>
       </section>
 
       <section class="card" id="resultsCard">
-        <h2>2. Results</h2>
+        <h2>2. Diagnosis &amp; instructions</h2>
         <div class="row results-toolbar">
           <button class="secondary" id="btnSaveCase">Save</button>
           <button class="secondary" id="btnLoadCase">Load last</button>
           <button class="secondary" id="btnClearCase">Clear</button>
           <button class="secondary" id="btnExport">Export</button>
         </div>
-        <div id="results" class="out rich mt-10">Nothing yet. Enter a code above, then tap <strong>Quick Lookup</strong>.</div>
+        <div id="results" class="out rich mt-10">Nothing yet. Capture sound or a photo, or enter a code, then tap <strong>Diagnose now</strong>.</div>
       </section>
 
-      <section class="card" id="jobsCard">
-        <h2>3. How-to jobs</h2>
-        <div class="small">Full driveway procedures: tools, parts, warnings, and numbered steps. Torque and fluid type still come from this vehicle’s service data.</div>
+      <details class="card collapsible" id="jobsCard">
+        <summary><strong>Browse how-to jobs</strong> <span class="small">(manual — diagnosis already pulls the right job when needed)</span></summary>
+        <div class="small">Full driveway procedures stay available here if you already know the job. Diagnosis does not dump this list into every result.</div>
         <label for="jobQuery">Find a job</label>
         <input id="jobQuery" placeholder="starter, brakes, oil, axle, stereo">
         <div id="commonJobs" class="mt-10"></div>
-      </section>
+      </details>
 
-      <section class="card" id="rebuildCard">
-        <h2>4. Engine rebuild</h2>
+      <details class="card collapsible" id="rebuildCard">
+        <summary><strong>Browse engine rebuild</strong> <span class="small">(shown automatically only when rebuild is indicated)</span></summary>
         <div class="small" id="rebuildSummary">Prove it is a bottom-end or head job, then pull, measure, assemble, and break in. Torque comes from your engine’s service data.</div>
         <div class="symptoms mt-10" id="rebuildFlags">
           <label><input type="checkbox" id="flagRodKnock"> <span>Rod knock</span></label>
@@ -94,12 +137,12 @@
           <button class="warn" id="btnRebuildDiagnosis">Start rebuild diagnosis</button>
         </div>
         <div id="rebuildStages" class="mt-10"></div>
-      </section>
+      </details>
 
       <details class="card collapsible" id="solutionsCardWrap">
-        <summary><strong>All repair solutions in this app</strong></summary>
+        <summary><strong>All repair solutions library</strong></summary>
         <div id="solutionsCard">
-          <div class="small">Code-specific driveway steps for common OBD-II problems, plus a fallback playbook for every other bundled code. These are not factory shop manuals.</div>
+          <div class="small">Reference index of every playbook in the app. Day-to-day use should go through Diagnose, not this list.</div>
           <label for="solutionQuery">Find a repair</label>
           <input id="solutionQuery" placeholder="P0442, starter, brakes, rebuild">
           <div id="allSolutions" class="mt-10"></div>
@@ -134,40 +177,6 @@
       </details>
 
       <details class="extra card">
-        <summary>Symptoms (optional)</summary>
-        <div class="symptoms" id="symptoms"></div>
-        <label for="notes">Notes</label>
-        <textarea id="notes" placeholder="Stalls warm, fuel smell, battery light on."></textarea>
-      </details>
-
-      <details class="extra card">
-        <summary>Audio / camera / photo (optional)</summary>
-        <div class="grid g2">
-          <div>
-            <label>Audio</label>
-            <div class="row"><button id="btnAudioRecord">Start Audio Recording</button><button class="secondary" id="btnAudioUpload">Upload Audio</button></div>
-            <input type="file" id="audioFile" accept="audio/*" hidden>
-            <audio id="audioPreview" controls class="full-w mt-8"></audio>
-            <div class="small" id="audioSummary">No audio analyzed yet.</div>
-          </div>
-          <div>
-            <label>Video / Camera</label>
-            <div class="row"><button id="btnStartCamera">Start Camera</button><button class="secondary" id="btnVideoUpload">Upload Video</button></div>
-            <input type="file" id="videoFile" accept="video/*" hidden>
-            <div class="row mt-8"><button class="secondary" id="btnCaptureFrame">Capture Frame</button><button class="secondary" id="btnStopCamera">Stop Camera</button></div>
-            <video id="videoPreview" playsinline muted controls></video>
-            <canvas id="frameCanvas" hidden></canvas>
-            <img id="frameImage" hidden alt="Captured frame">
-            <div class="small" id="imageSummary">No frame/image analyzed yet.</div>
-          </div>
-        </div>
-        <label>Photo</label>
-        <div class="row"><button class="secondary" id="btnPhotoUpload">Upload Photo</button></div>
-        <input type="file" id="photoFile" accept="image/*" hidden>
-        <img id="photoPreview" hidden alt="Photo evidence" class="mt-8">
-      </details>
-
-      <details class="extra card">
         <summary>Fluid assistant (optional)</summary>
         <div class="grid g3">
           <div><label for="fluidType">Fluid type</label><select id="fluidType"><option value="">Select</option><option>Engine oil</option><option>Transmission fluid</option><option>Coolant</option><option>Brake fluid</option><option>Power steering</option><option>Differential oil</option></select></div>
@@ -191,7 +200,7 @@
       </details>
     </div>
 
-    <div class="footer">Auto/Truck Diagnostics for Dummies <span id="footerVersion">v1.2.0</span> · Offline on this device</div>
+    <div class="footer">Auto/Truck Diagnostics for Dummies <span id="footerVersion">v1.2.0</span> · Camera + mic diagnose first · Offline on this device</div>
   </div>
   <script src="./data/dtc-db.js"></script>
   <script src="./data/common-jobs.js"></script>

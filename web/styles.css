@@ -92,6 +92,14 @@ details.collapsible[open] > summary{margin-bottom:10px}
 details.extra{padding-top:8px}
 details.extra summary{font-weight:700;color:#ffd27b;cursor:pointer;padding:6px 0}
 details.extra[open] summary{margin-bottom:10px}
+.capture-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin:12px 0}
+.capture-panel{background:#0f0f0f;border:1px solid #4a310e;border-radius:14px;padding:12px}
+.capture-panel h3{margin:0 0 6px;color:#ffd27b;font-size:1.05rem}
+.outcome-banner{background:linear-gradient(135deg,#241707,#2a0c10);border:1px solid #8a4a00;border-radius:14px;padding:14px;margin:0 0 14px}
+.outcome-banner .kind{display:inline-block;background:#291300;border:1px solid #7d4200;color:#ffd27b;padding:3px 8px;border-radius:999px;font-size:.75rem;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
+.outcome-banner h3{margin:0 0 6px;color:#ffd982;font-size:1.2rem}
+.evidence-list{margin:0;padding-left:1.1rem;color:var(--muted)}
+.evidence-list li{margin:0 0 4px}
 @media (max-width:720px){
   .hero{padding:14px;border-radius:18px}
   .hero .sub{font-size:.95rem}
@@ -102,11 +110,12 @@ details.extra[open] summary{margin-bottom:10px}
   .topbar-extra{display:none}
   .g2,.g3{grid-template-columns:1fr}
   .wrap{padding:12px}
-  #codes{min-height:72px;font-size:1.15rem;letter-spacing:.04em}
+  #codes{min-height:64px;font-size:1.15rem;letter-spacing:.04em}
   button,.button{padding:14px 12px;font-size:1.05rem}
   .primary-actions > *{flex:1 1 100%}
   .results-toolbar{gap:8px}
   .results-toolbar > *{flex:1 1 calc(50% - 8px)}
+  .capture-grid{grid-template-columns:1fr}
 }
 @media (min-width:721px){
   .topbar button{flex:1 1 120px}

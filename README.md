@@ -10,7 +10,7 @@ sync-web.sh   copies web/ into windows/app, ios/www, and the Xcode public folder
 SYNC_WEB.bat  same copy step for Windows machines without bash
 ```
 
-Version **1.2.0**. Core diagnosis is on-device: bundled DTC lookup, symptom triage, fluid assistant, media-assisted cues, case save/export, and legal/pricing pages. No network calls. No live OBD hardware integration. CDI Genius is intentionally not included.
+Version **1.2.0**. Diagnose-first offline assistant: camera and microphone cues plus optional scanner codes, then repair instructions only for the finding that diagnosis selects. Bundled DTC library, how-to jobs, and engine rebuild remain available when indicated (or via collapsed browse). No network calls. No live OBD hardware integration. CDI Genius is intentionally not included.
 
 ## Transfer to a computer
 
