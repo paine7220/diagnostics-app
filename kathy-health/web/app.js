@@ -422,7 +422,7 @@
         </label>
         <button type="button" class="btn btn-secondary btn-sm" data-action="save-profile">Save name</button>
         <div class="section-label">Privacy</div>
-        <p class="muted">Kathy Health keeps everything on this device. There is no account and no cloud backup in this version. Clearing Safari or app data removes records.</p>
+        <p class="muted">Kathy Health keeps everything on this device. There is no account and no cloud backup in this version. Clearing browser or app data removes records.</p>
         <p><a class="linkish" href="./docs/privacy.html">Privacy policy</a> · <a class="linkish" href="./docs/disclaimer.html">Health disclaimer</a></p>
         <div class="section-label">Data</div>
         <button type="button" class="btn btn-secondary btn-sm" data-action="export-data">Export JSON backup</button>
