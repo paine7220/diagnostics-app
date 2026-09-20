@@ -1,6 +1,8 @@
-# Family alert worker (automatic SMS)
+# Family alert worker (automatic SMS + Dexcom Share proxy)
 
 When Kathy’s sugar is low and she does **not** respond, the phone app POSTs to this worker. With Twilio secrets set, the worker texts family **without Kathy tapping Send**.
+
+It also proxies **Dexcom Share** (`POST /dexcom/latest`) so the iPhone app can read CGM values (browser CORS blocks calling Share directly).
 
 ## Deploy
 
@@ -12,11 +14,12 @@ npx wrangler secret put TWILIO_AUTH_TOKEN
 npx wrangler secret put TWILIO_FROM_NUMBER
 ```
 
-Copy the worker URL (e.g. `https://kathy-health-alerts.<account>.workers.dev`) into the app:
+In the app:
 
-**Settings → Alert webhook** → `https://kathy-health-alerts.<account>.workers.dev/alert`
+- **Settings → Alert webhook** → `https://kathy-health-alerts.<account>.workers.dev/alert`
+- **Settings → Dexcom / CGM** → Dexcom Share + username/password (Share enabled on Dexcom app)
 
-## Test
+## Test alert
 
 ```bash
 curl -X POST https://kathy-health-alerts.<account>.workers.dev/alert \
@@ -24,4 +27,12 @@ curl -X POST https://kathy-health-alerts.<account>.workers.dev/alert \
   -d '{"message":"Test alert","family":[{"name":"Michael","phone":"5551234567"}],"type":"test"}'
 ```
 
-IFTTT/Zapier webhooks also work in the same Settings field if you prefer those instead of Twilio.
+## Dexcom Share proxy
+
+```bash
+curl -X POST https://kathy-health-alerts.<account>.workers.dev/dexcom/latest \
+  -H 'content-type: application/json' \
+  -d '{"accountName":"kathy","password":"…","region":"us"}'
+```
+
+Region `ous` for outside the US. IFTTT/Zapier webhooks also work for `/alert` if you prefer those instead of Twilio.

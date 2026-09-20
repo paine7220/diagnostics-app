@@ -14,6 +14,7 @@ function mustExist(rel) {
 mustExist('README.md');
 mustExist('web/index.html');
 mustExist('web/app.js');
+mustExist('web/dexcom.js');
 mustExist('web/alerts.js');
 mustExist('web/notes-import.js');
 mustExist('web/styles.css');
@@ -27,6 +28,7 @@ mustExist('docs/IPHONE.md');
 
 const html = fs.readFileSync(path.join(web, 'index.html'), 'utf8');
 assert.ok(html.includes("Kathy’s Health") || html.includes("Kathy's Health"), 'brand in html');
+assert.ok(html.includes('dexcom.js'), 'dexcom script');
 assert.ok(html.includes('alerts.js'), 'alerts script');
 assert.ok(html.includes('notes-import.js'), 'notes import script');
 assert.ok(html.includes('app.js'), 'app script');
@@ -38,12 +40,15 @@ assert.ok(css.includes('alert-overlay'), 'alert overlay styles');
 
 const importSrc = fs.readFileSync(path.join(web, 'notes-import.js'), 'utf8');
 const alertSrc = fs.readFileSync(path.join(web, 'alerts.js'), 'utf8');
+const dexcomSrc = fs.readFileSync(path.join(web, 'dexcom.js'), 'utf8');
 const sandbox = { window: {}, console, setTimeout, clearTimeout };
 vm.createContext(sandbox);
 vm.runInContext(importSrc, sandbox);
 vm.runInContext(alertSrc, sandbox);
+vm.runInContext(dexcomSrc, sandbox);
 const { importNotes } = sandbox.window.KathyNotesImport;
 const Alerts = sandbox.window.KathyAlerts;
+const Dexcom = sandbox.window.KathyDexcom;
 
 assert.ok(Alerts.isLowSugar('65', 70), '65 is low');
 assert.ok(!Alerts.isLowSugar('110', 70), '110 is not low');
@@ -51,10 +56,14 @@ assert.ok(Alerts.smsUrl('555-123-4567', 'help').startsWith('sms:'), 'sms url');
 assert.ok(/low blood sugar/i.test(Alerts.buildAlertMessage('Kathy', '55', 'mg/dL')), 'alert message');
 assert.ok(typeof Alerts.postWebhook === 'function', 'webhook helper');
 assert.ok(Alerts.alertPayload({ message: 'x', family: [] }).type, 'payload helper');
+assert.ok(Dexcom.normalizeNightscoutEntry({ sgv: 55, date: Date.now() }).mgdl === 55, 'nightscout normalize');
+assert.ok(Dexcom.trendArrow('SingleDown') === '↓', 'trend arrow');
 
 const worker = fs.readFileSync(path.join(root, 'alert-worker/src/index.js'), 'utf8');
 assert.ok(worker.includes('sendTwilioSms'), 'twilio sms path');
 assert.ok(worker.includes('/alert'), 'alert route');
+assert.ok(worker.includes('/dexcom/latest'), 'dexcom proxy route');
+assert.ok(worker.includes('LoginPublisherAccountByName'), 'dexcom share login');
 
 const sample = `
 Medications
@@ -84,5 +93,7 @@ assert.ok(appSrc.includes('Import notes'), 'import UI');
 assert.ok(appSrc.includes('beginLowSugarAlert'), 'low sugar alert flow');
 assert.ok(appSrc.includes('dispatchFamilyAlert'), 'family alert dispatch');
 assert.ok(appSrc.includes('family'), 'family contacts');
+assert.ok(appSrc.includes('refreshCgm'), 'cgm refresh');
+assert.ok(appSrc.includes('dexcom_share'), 'dexcom share mode');
 
 console.log('kathy-health checks passed');

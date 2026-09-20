@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'kathy_health_v1';
-  const VERSION = '1.2.0';
+  const VERSION = '1.3.0';
 
   const defaultState = () => ({
     version: VERSION,
@@ -23,6 +23,18 @@
       webhookUrl: '',
       unit: 'mg/dL'
     },
+    cgm: {
+      mode: 'off', // off | nightscout | dexcom_share
+      nightscoutUrl: '',
+      nightscoutSecret: '',
+      accountName: '',
+      password: '',
+      region: 'us',
+      pollSeconds: 60,
+      lastReading: null,
+      lastError: '',
+      lastFetchAt: null
+    },
     activeAlert: null,
     alertLog: []
   });
@@ -31,12 +43,18 @@
   let route = 'today';
   let modal = null;
   let alertTick = null;
+  let cgmTick = null;
 
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultState();
-      return Object.assign(defaultState(), JSON.parse(raw));
+      const parsed = JSON.parse(raw);
+      const base = defaultState();
+      const merged = Object.assign(base, parsed);
+      merged.alertSettings = Object.assign(base.alertSettings, parsed.alertSettings || {});
+      merged.cgm = Object.assign(base.cgm, parsed.cgm || {});
+      return merged;
     } catch (e) {
       return defaultState();
     }
@@ -102,7 +120,83 @@
     }, 1000);
   }
 
+  function webhookBaseUrl() {
+    const wh = (state.alertSettings.webhookUrl || '').trim();
+    if (!wh) return '';
+    return wh.replace(/\/alert\/?$/, '');
+  }
+
+  function clearCgmTimer() {
+    if (cgmTick) {
+      clearInterval(cgmTick);
+      cgmTick = null;
+    }
+  }
+
+  function startCgmTimer() {
+    clearCgmTimer();
+    if (!state.onboarded || !state.cgm || state.cgm.mode === 'off') return;
+    const seconds = Math.max(30, Number(state.cgm.pollSeconds || 60));
+    cgmTick = setInterval(() => { refreshCgm(false); }, seconds * 1000);
+  }
+
+  function recordCgmVital(reading) {
+    if (!reading || !Number.isFinite(Number(reading.mgdl))) return;
+    const last = state.cgm.lastReading;
+    if (last && last.at === reading.at && Number(last.mgdl) === Number(reading.mgdl)) return;
+    state.vitals.push({
+      id: uid('vit'),
+      kind: 'Blood sugar',
+      value: String(reading.mgdl),
+      unit: 'mg/dL',
+      notes: 'CGM ' + (reading.source || '') + (reading.trend ? ' ' + reading.trend : ''),
+      at: reading.at || new Date().toISOString(),
+      fromCgm: true
+    });
+    if (state.vitals.length > 400) state.vitals = state.vitals.slice(-400);
+  }
+
+  async function refreshCgm(manual) {
+    if (!state.cgm || state.cgm.mode === 'off') return;
+    try {
+      const reading = await KathyDexcom.fetchLatest({
+        mode: state.cgm.mode,
+        nightscoutUrl: state.cgm.nightscoutUrl,
+        nightscoutSecret: state.cgm.nightscoutSecret,
+        accountName: state.cgm.accountName,
+        password: state.cgm.password,
+        region: state.cgm.region,
+        proxyUrl: webhookBaseUrl(),
+        webhookBase: webhookBaseUrl()
+      });
+      recordCgmVital(reading);
+      state.cgm.lastReading = reading;
+      state.cgm.lastError = '';
+      state.cgm.lastFetchAt = new Date().toISOString();
+      save();
+      if (manual) toast('CGM updated: ' + reading.mgdl + ' mg/dL');
+      if (
+        KathyAlerts.isLowSugar(reading.mgdl, state.alertSettings.lowSugarThreshold) &&
+        !(state.activeAlert && state.activeAlert.status === 'waiting')
+      ) {
+        beginLowSugarAlert(reading.mgdl, 'mg/dL');
+      } else {
+        render();
+      }
+    } catch (err) {
+      state.cgm.lastError = String(err && err.message || err);
+      state.cgm.lastFetchAt = new Date().toISOString();
+      save();
+      if (manual) toast(state.cgm.lastError);
+      else render();
+    }
+  }
+
   function beginLowSugarAlert(sugarValue, unit) {
+    if (state.activeAlert && state.activeAlert.status === 'waiting') {
+      render();
+      return;
+    }
     const seconds = Math.max(30, Number(state.alertSettings.responseSeconds || 120));
     state.activeAlert = {
       id: uid('alert'),
@@ -330,12 +424,32 @@
       <section class="section sugar-panel">
         <div class="section-head"><h3>Blood sugar</h3></div>
         <p class="item-meta">Low alert at ${esc(String(state.alertSettings.lowSugarThreshold))} ${esc(state.alertSettings.unit || 'mg/dL')}. If there is no OK within ${esc(String(state.alertSettings.responseSeconds))} seconds, family is alerted automatically.</p>
+        ${state.cgm && state.cgm.mode !== 'off' ? `
+          <article class="item" style="margin-top:10px">
+            <p class="item-title">
+              ${state.cgm.lastReading
+                ? esc(String(state.cgm.lastReading.mgdl)) + ' mg/dL ' + esc(state.cgm.lastReading.trend || '')
+                : 'Waiting for Dexcom…'}
+            </p>
+            <p class="item-meta">
+              Source: ${esc(state.cgm.mode === 'dexcom_share' ? 'Dexcom Share' : 'Nightscout')}
+              ${state.cgm.lastReading && state.cgm.lastReading.at ? ' · ' + esc(new Date(state.cgm.lastReading.at).toLocaleTimeString()) : ''}
+              ${state.cgm.lastError ? '<br><span class="badge warn">' + esc(state.cgm.lastError) + '</span>' : ''}
+            </p>
+          </article>` : ''}
         <div class="item-actions" style="margin-top:10px">
           <button type="button" data-open="sugar">Log sugar</button>
+          ${state.cgm && state.cgm.mode !== 'off' ? '<button type="button" class="secondary" id="btnRefreshCgm">Refresh CGM</button>' : ''}
           <button type="button" class="warn" id="btnHelpNow">I need help</button>
         </div>
         <p class="item-meta" style="margin-top:10px">
-          ${recentVital && /blood sugar/i.test(recentVital.kind) ? `Latest sugar: ${esc(recentVital.value)}${recentVital.unit ? ' ' + esc(recentVital.unit) : ''}` : 'No sugar reading yet today.'}
+          ${(() => {
+            const sugarVital = state.vitals.filter((v) => /blood sugar/i.test(v.kind)).sort((a, b) => b.at.localeCompare(a.at))[0];
+            if (state.cgm && state.cgm.lastReading) {
+              return 'Latest CGM: ' + esc(String(state.cgm.lastReading.mgdl)) + ' mg/dL';
+            }
+            return sugarVital ? ('Latest sugar: ' + esc(sugarVital.value) + (sugarVital.unit ? ' ' + esc(sugarVital.unit) : '')) : 'No sugar reading yet — connect Dexcom in Settings or log manually.';
+          })()}
         </p>
       </section>
 
@@ -561,6 +675,52 @@
         </div>
       </section>
       <section class="section">
+        <div class="section-head"><h3>Dexcom / CGM</h3></div>
+        <p class="lede">Pull live glucose so low readings start the family check-in without typing a number.</p>
+        <div class="field">
+          <label for="cgmMode">Source</label>
+          <select id="cgmMode">
+            <option value="off" ${state.cgm.mode === 'off' ? 'selected' : ''}>Off (manual only)</option>
+            <option value="dexcom_share" ${state.cgm.mode === 'dexcom_share' ? 'selected' : ''}>Dexcom Share</option>
+            <option value="nightscout" ${state.cgm.mode === 'nightscout' ? 'selected' : ''}>Nightscout</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="cgmAccount">Dexcom Share username</label>
+            <input id="cgmAccount" value="${esc(state.cgm.accountName || '')}" autocomplete="username">
+          </div>
+          <div class="field">
+            <label for="cgmPassword">Dexcom Share password</label>
+            <input id="cgmPassword" type="password" value="${esc(state.cgm.password || '')}" autocomplete="current-password">
+          </div>
+        </div>
+        <div class="field">
+          <label for="cgmRegion">Dexcom region</label>
+          <select id="cgmRegion">
+            <option value="us" ${state.cgm.region !== 'ous' ? 'selected' : ''}>United States</option>
+            <option value="ous" ${state.cgm.region === 'ous' ? 'selected' : ''}>Outside US</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="cgmNightscout">Nightscout URL (if using Nightscout)</label>
+          <input id="cgmNightscout" value="${esc(state.cgm.nightscoutUrl || '')}" placeholder="https://yoursite.herokuapp.com">
+        </div>
+        <div class="field">
+          <label for="cgmNsSecret">Nightscout API secret (optional)</label>
+          <input id="cgmNsSecret" type="password" value="${esc(state.cgm.nightscoutSecret || '')}">
+        </div>
+        <div class="field">
+          <label for="cgmPoll">Poll every (seconds)</label>
+          <input id="cgmPoll" type="number" value="${esc(String(state.cgm.pollSeconds || 60))}">
+        </div>
+        <p class="disclaimer">Dexcom Share needs Share enabled on the Dexcom app plus the alert worker URL above (used as a proxy). Keep this phone awake or reopen the app so polling can run.</p>
+        <div class="item-actions">
+          <button type="button" id="btnSaveCgm">Save CGM settings</button>
+          <button type="button" class="secondary" id="btnTestCgm">Test CGM now</button>
+        </div>
+      </section>
+      <section class="section">
         <div class="section-head"><h3>Family to alert</h3></div>
         <button type="button" data-open="family">Add family contact</button>
         <div class="list" style="margin-top:10px">
@@ -753,6 +913,7 @@
     main.innerHTML = html + renderModal() + renderAlertOverlay();
     bind();
     if (state.activeAlert && state.activeAlert.status === 'waiting') startAlertTimer();
+    startCgmTimer();
   }
 
   function bind() {
@@ -814,6 +975,36 @@
         dispatchFamilyAlert('help_requested');
       });
     }
+    const refreshCgmBtn = document.getElementById('btnRefreshCgm');
+    if (refreshCgmBtn) refreshCgmBtn.addEventListener('click', () => refreshCgm(true));
+    const saveCgm = document.getElementById('btnSaveCgm');
+    if (saveCgm) {
+      saveCgm.addEventListener('click', () => {
+        state.cgm.mode = document.getElementById('cgmMode').value;
+        state.cgm.accountName = document.getElementById('cgmAccount').value.trim();
+        state.cgm.password = document.getElementById('cgmPassword').value;
+        state.cgm.region = document.getElementById('cgmRegion').value;
+        state.cgm.nightscoutUrl = document.getElementById('cgmNightscout').value.trim();
+        state.cgm.nightscoutSecret = document.getElementById('cgmNsSecret').value;
+        state.cgm.pollSeconds = Math.max(30, Number(document.getElementById('cgmPoll').value || 60));
+        save();
+        startCgmTimer();
+        toast(state.cgm.mode === 'off' ? 'CGM off' : 'CGM settings saved');
+        if (state.cgm.mode !== 'off') refreshCgm(true);
+        else render();
+      });
+    }
+    const testCgm = document.getElementById('btnTestCgm');
+    if (testCgm) testCgm.addEventListener('click', () => {
+      state.cgm.mode = document.getElementById('cgmMode').value;
+      state.cgm.accountName = document.getElementById('cgmAccount').value.trim();
+      state.cgm.password = document.getElementById('cgmPassword').value;
+      state.cgm.region = document.getElementById('cgmRegion').value;
+      state.cgm.nightscoutUrl = document.getElementById('cgmNightscout').value.trim();
+      state.cgm.nightscoutSecret = document.getElementById('cgmNsSecret').value;
+      save();
+      refreshCgm(true);
+    });
     const imOk = document.getElementById('btnImOk');
     if (imOk) imOk.addEventListener('click', () => { clearActiveAlert('ok'); toast('Glad you’re OK'); });
     const imOkLate = document.getElementById('btnImOkLate');
@@ -1187,6 +1378,11 @@
     } else {
       startAlertTimer();
     }
+  }
+
+  startCgmTimer();
+  if (state.onboarded && state.cgm && state.cgm.mode !== 'off') {
+    refreshCgm(false);
   }
 
   render();
