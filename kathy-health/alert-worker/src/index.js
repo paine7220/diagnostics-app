@@ -29,7 +29,8 @@ export default {
         ok: true,
         service: 'kathy-health-alerts',
         twilioConfigured: Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_FROM_NUMBER),
-        dexcomShareProxy: true
+        dexcomShareProxy: true,
+        billingAi: Boolean(env.OPENAI_API_KEY)
       });
     }
 
@@ -37,13 +38,69 @@ export default {
       return handleDexcomLatest(request);
     }
 
+    if (request.method === 'POST' && url.pathname === '/billing/assist') {
+      return handleBillingAssist(request, env);
+    }
+
     if (request.method === 'POST' && url.pathname === '/alert') {
       return handleAlert(request, env);
     }
 
-    return json({ ok: false, error: 'Use POST /alert or POST /dexcom/latest' }, 404);
+    return json({ ok: false, error: 'Use POST /alert, /dexcom/latest, or /billing/assist' }, 404);
   }
 };
+
+async function handleBillingAssist(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return json({ ok: false, error: 'Invalid JSON' }, 400);
+  }
+
+  const apiKey = env.OPENAI_API_KEY || String(body.apiKey || '').trim();
+  if (!apiKey) {
+    return json({
+      ok: false,
+      error: 'No OPENAI_API_KEY on worker and no apiKey in request. Add the secret or use local helper mode.'
+    }, 400);
+  }
+
+  const system = String(body.system || '').slice(0, 4000);
+  const user = String(body.user || '').slice(0, 12000);
+  if (!user) return json({ ok: false, error: 'user prompt required' }, 400);
+
+  const model = String(body.model || env.OPENAI_MODEL || 'gpt-4o-mini');
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + apiKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      messages: [
+        { role: 'system', content: system || 'You help patients understand medical billing and insurance. Not legal advice.' },
+        { role: 'user', content: user }
+      ]
+    })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return json({
+      ok: false,
+      error: (data && data.error && data.error.message) || ('OpenAI HTTP ' + res.status)
+    }, 502);
+  }
+  const answer = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  return json({
+    ok: true,
+    answer: answer || '',
+    model,
+    usage: data.usage || null
+  });
+}
 
 async function handleAlert(request, env) {
   let body;

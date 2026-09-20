@@ -12,12 +12,14 @@ npx wrangler deploy
 npx wrangler secret put TWILIO_ACCOUNT_SID
 npx wrangler secret put TWILIO_AUTH_TOKEN
 npx wrangler secret put TWILIO_FROM_NUMBER
+npx wrangler secret put OPENAI_API_KEY   # optional — Bills AI
 ```
 
 In the app:
 
 - **Settings → Alert webhook** → `https://kathy-health-alerts.<account>.workers.dev/alert`
 - **Settings → Dexcom / CGM** → Dexcom Share + username/password (Share enabled on Dexcom app)
+- **Bills** tab uses `POST /billing/assist` when AI is enabled
 
 ## Test alert
 

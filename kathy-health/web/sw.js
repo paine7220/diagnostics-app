@@ -1,4 +1,4 @@
-const CACHE = 'kathy-health-v7';
+const CACHE = 'kathy-health-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './alerts.js',
   './dexcom.js',
   './pump.js',
+  './billing.js',
   './manifest.webmanifest',
   './privacy.html',
   './icons/icon-192.png',

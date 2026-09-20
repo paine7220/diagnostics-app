@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'kathy_health_v1';
-  const VERSION = '1.4.0';
+  const VERSION = '1.5.0';
 
   const defaultState = () => ({
     version: VERSION,
@@ -48,6 +48,11 @@
       lastError: '',
       lastFetchAt: null
     },
+    billing: {
+      openaiKey: '',
+      preferAi: true,
+      cases: []
+    },
     activeAlert: null,
     alertLog: []
   });
@@ -68,6 +73,8 @@
       merged.alertSettings = Object.assign(base.alertSettings, parsed.alertSettings || {});
       merged.cgm = Object.assign(base.cgm, parsed.cgm || {});
       merged.pump = Object.assign(base.pump, parsed.pump || {});
+      merged.billing = Object.assign(base.billing, parsed.billing || {});
+      if (!Array.isArray(merged.billing.cases)) merged.billing.cases = [];
       return merged;
     } catch (e) {
       return defaultState();
@@ -713,6 +720,51 @@
     `;
   }
 
+  function renderBills() {
+    const cases = (state.billing.cases || []).slice().reverse().slice(0, 10);
+    const taskOptions = Object.keys(KathyBilling.TASKS).map((key) =>
+      `<option value="${esc(key)}">${esc(KathyBilling.TASKS[key].label)}</option>`
+    ).join('');
+    return `
+      <section class="section">
+        <h2>Bills & insurance</h2>
+        <p class="lede">Paste a bill or EOB. Get a plain-language read, appeal draft, call script, or error checklist — with optional AI.</p>
+        <div class="field">
+          <label for="billTask">Help me</label>
+          <select id="billTask">${taskOptions}</select>
+        </div>
+        <div class="field">
+          <label for="billDoc">Bill / EOB / letter text</label>
+          <textarea id="billDoc" placeholder="Paste the statement, EOB, or denial letter here…"></textarea>
+        </div>
+        <div class="field">
+          <label for="billQuestion">Extra question (optional)</label>
+          <input id="billQuestion" placeholder="Why is my balance still $420 after insurance?">
+        </div>
+        <div class="item-actions">
+          <button type="button" id="btnBillAssist">Get help</button>
+          <button type="button" class="secondary" id="btnBillLocal">Local helper only</button>
+        </div>
+        <p class="disclaimer" style="margin-top:10px">Not legal advice. AI uses your alert worker + OpenAI key when configured; otherwise the built-in helper runs on-device.</p>
+        <div class="field" style="margin-top:14px">
+          <label for="billAnswer">Result</label>
+          <textarea id="billAnswer" readonly placeholder="Guidance will appear here…"></textarea>
+        </div>
+      </section>
+      <section class="section">
+        <div class="section-head"><h3>Saved billing help</h3></div>
+        <div class="list">
+          ${cases.length ? cases.map((c) => `
+            <article class="item">
+              <p class="item-title">${esc((KathyBilling.TASKS[c.task] && KathyBilling.TASKS[c.task].label) || c.task)}</p>
+              <p class="item-meta">${new Date(c.at).toLocaleString()} · ${c.mode === 'ai' ? 'AI' : 'Local'}</p>
+              <button type="button" class="ghost" data-load-bill="${esc(c.id)}">Open</button>
+            </article>`).join('') : `<div class="empty">No billing sessions saved yet.</div>`}
+        </div>
+      </section>
+    `;
+  }
+
   function renderSettings() {
     const family = state.family || [];
     const webhookReady = Boolean((state.alertSettings.webhookUrl || '').trim());
@@ -745,6 +797,14 @@
         <p class="disclaimer">${webhookReady
           ? 'Webhook saved — low-sugar timeouts will notify family without Kathy tapping Send.'
           : 'Without a webhook, the phone cannot text family if Kathy is unresponsive. Deploy kathy-health/alert-worker or use IFTTT/Zapier.'}</p>
+        <div class="field">
+          <label for="billingOpenAiKey">OpenAI API key for Bills AI (optional if worker has OPENAI_API_KEY)</label>
+          <input id="billingOpenAiKey" type="password" value="${esc(state.billing.openaiKey || '')}" placeholder="sk-…">
+        </div>
+        <label class="disclaimer" style="display:flex;gap:8px;align-items:flex-start;margin:8px 0 12px">
+          <input type="checkbox" id="billingPreferAi" ${state.billing.preferAi !== false ? 'checked' : ''}>
+          <span>Prefer AI for Bills when a key/worker is available</span>
+        </label>
         <div class="item-actions">
           <button type="button" id="btnSaveProfile">Save alert settings</button>
           <button type="button" class="secondary" id="btnTestAlert">Send test alert</button>
@@ -1035,6 +1095,7 @@
     else if (route === 'meds') html = renderMeds();
     else if (route === 'log') html = renderLog();
     else if (route === 'care') html = renderCare();
+    else if (route === 'bills') html = renderBills();
     else if (route === 'notes') html = renderNotes();
     else if (route === 'settings') html = renderSettings();
     main.innerHTML = html + renderModal() + renderAlertOverlay();
@@ -1281,6 +1342,68 @@
       });
     }
 
+    async function runBilling(forceLocal) {
+      const task = document.getElementById('billTask').value;
+      const doc = document.getElementById('billDoc').value;
+      const question = document.getElementById('billQuestion').value.trim();
+      const answerEl = document.getElementById('billAnswer');
+      if (!doc.trim() && !question) {
+        toast('Paste a bill or ask a question');
+        return;
+      }
+      const packed = KathyBilling.buildMessages(task, doc, state.profileName, question);
+      let answer = '';
+      let mode = 'local';
+      const canAi = !forceLocal && state.billing.preferAi !== false && (state.billing.openaiKey || webhookBaseUrl());
+      if (canAi) {
+        try {
+          answerEl.value = 'Asking billing AI…';
+          const data = await KathyBilling.askWorker(webhookBaseUrl(), {
+            system: packed.system,
+            user: packed.user,
+            apiKey: state.billing.openaiKey || undefined,
+            task
+          });
+          answer = data.answer || '';
+          mode = 'ai';
+        } catch (err) {
+          answer = KathyBilling.localAssist(task, doc, state.profileName) + '\n\n(AI unavailable: ' + String(err && err.message || err) + ')';
+          mode = 'local';
+        }
+      } else {
+        answer = KathyBilling.localAssist(task, doc, state.profileName);
+      }
+      answerEl.value = answer;
+      state.billing.cases.push({
+        id: uid('bill'),
+        at: new Date().toISOString(),
+        task,
+        document: doc.slice(0, 8000),
+        question,
+        answer: answer.slice(0, 12000),
+        mode
+      });
+      if (state.billing.cases.length > 40) state.billing.cases = state.billing.cases.slice(-40);
+      save();
+      toast(mode === 'ai' ? 'AI billing help ready' : 'Local billing help ready');
+    }
+
+    const billAssist = document.getElementById('btnBillAssist');
+    if (billAssist) billAssist.addEventListener('click', () => runBilling(false));
+    const billLocal = document.getElementById('btnBillLocal');
+    if (billLocal) billLocal.addEventListener('click', () => runBilling(true));
+    document.querySelectorAll('[data-load-bill]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const item = (state.billing.cases || []).find((c) => c.id === btn.getAttribute('data-load-bill'));
+        if (!item) return;
+        document.getElementById('billTask').value = item.task;
+        document.getElementById('billDoc').value = item.document || '';
+        document.getElementById('billQuestion').value = item.question || '';
+        document.getElementById('billAnswer').value = item.answer || '';
+        toast('Loaded saved help');
+      });
+    });
+
     const saveProfile = document.getElementById('btnSaveProfile');
     if (saveProfile) {
       saveProfile.addEventListener('click', () => {
@@ -1289,6 +1412,10 @@
         state.alertSettings.responseSeconds = Math.max(30, Number(document.getElementById('responseSeconds').value || 120));
         state.alertSettings.unit = document.getElementById('sugarUnit').value.trim() || 'mg/dL';
         state.alertSettings.webhookUrl = document.getElementById('webhookUrl').value.trim();
+        const keyEl = document.getElementById('billingOpenAiKey');
+        const preferEl = document.getElementById('billingPreferAi');
+        if (keyEl) state.billing.openaiKey = keyEl.value.trim();
+        if (preferEl) state.billing.preferAi = preferEl.checked;
         save();
         toast(state.alertSettings.webhookUrl ? 'Alert settings saved' : 'Saved — add a webhook for no-response texts');
         render();
