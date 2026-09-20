@@ -143,8 +143,10 @@
 
   function webhookBaseUrl() {
     const wh = (state.alertSettings.webhookUrl || '').trim();
-    if (!wh) return '';
-    return wh.replace(/\/alert\/?$/, '');
+    if (wh) return wh.replace(/\/alert\/?$/, '');
+    // Same-origin phone-test server / deployed worker
+    if (typeof location !== 'undefined' && /^https?:/.test(location.origin)) return location.origin;
+    return '';
   }
 
   function clearCgmTimer() {
@@ -481,6 +483,15 @@
 
       <section class="section sugar-panel">
         <div class="section-head"><h3>Blood sugar</h3></div>
+        ${!(state.cgm && state.cgm.mode !== 'off') ? `
+          <article class="item">
+            <p class="item-title">Connect Dexcom on this iPhone</p>
+            <p class="item-meta">Open Settings → Dexcom / CGM → choose Dexcom Share, enter the Dexcom app account, then Test CGM now.</p>
+            <div class="item-actions">
+              <button type="button" data-route-link="settings">Open Dexcom settings</button>
+              <a class="button secondary" href="dexcom://">Open Dexcom app</a>
+            </div>
+          </article>` : ''}
         <p class="item-meta">Low alert at ${esc(String(state.alertSettings.lowSugarThreshold))} ${esc(state.alertSettings.unit || 'mg/dL')}. If there is no OK within ${esc(String(state.alertSettings.responseSeconds))} seconds, family is alerted automatically.</p>
         ${state.cgm && state.cgm.mode !== 'off' ? `
           <article class="item" style="margin-top:10px">
@@ -812,12 +823,23 @@
       </section>
       <section class="section">
         <div class="section-head"><h3>Dexcom / CGM</h3></div>
-        <p class="lede">Pull live glucose so low readings start the family check-in without typing a number.</p>
+        <p class="lede">Connect the Dexcom app on this iPhone via Dexcom Share, then pull live glucose into Kathy’s Health.</p>
+        <article class="item">
+          <p class="item-title">iPhone setup (Michael’s phone test)</p>
+          <p class="item-meta">
+            1. Open the <strong>Dexcom</strong> app → Share → turn Sharing <strong>On</strong> (invite a follower if needed — you can invite yourself).<br>
+            2. Use the <strong>same Dexcom account</strong> username/password below.<br>
+            3. Tap <strong>Save CGM</strong>, then <strong>Test CGM now</strong> — a live reading should appear on Today.
+          </p>
+          <div class="item-actions">
+            <a class="button secondary" href="dexcom://">Open Dexcom app</a>
+          </div>
+        </article>
         <div class="field">
           <label for="cgmMode">Source</label>
           <select id="cgmMode">
             <option value="off" ${state.cgm.mode === 'off' ? 'selected' : ''}>Off (manual only)</option>
-            <option value="dexcom_share" ${state.cgm.mode === 'dexcom_share' ? 'selected' : ''}>Dexcom Share</option>
+            <option value="dexcom_share" ${state.cgm.mode === 'dexcom_share' ? 'selected' : ''}>Dexcom Share (from Dexcom app)</option>
             <option value="nightscout" ${state.cgm.mode === 'nightscout' ? 'selected' : ''}>Nightscout</option>
           </select>
         </div>
@@ -850,7 +872,7 @@
           <label for="cgmPoll">Poll every (seconds)</label>
           <input id="cgmPoll" type="number" value="${esc(String(state.cgm.pollSeconds || 60))}">
         </div>
-        <p class="disclaimer">Dexcom Share needs Share enabled on the Dexcom app plus the alert worker URL above (used as a proxy). Keep this phone awake or reopen the app so polling can run.</p>
+        <p class="disclaimer">Dexcom Share uses this phone’s Dexcom app account. Proxy URL defaults to this site (${esc(typeof location !== 'undefined' ? location.origin : '')}). Keep Kathy’s Health open (or reopen it) so polling can run.</p>
         <div class="item-actions">
           <button type="button" id="btnSaveCgm">Save CGM settings</button>
           <button type="button" class="secondary" id="btnTestCgm">Test CGM now</button>
@@ -1178,6 +1200,9 @@
         state.cgm.nightscoutUrl = document.getElementById('cgmNightscout').value.trim();
         state.cgm.nightscoutSecret = document.getElementById('cgmNsSecret').value;
         state.cgm.pollSeconds = Math.max(30, Number(document.getElementById('cgmPoll').value || 60));
+        if (!state.alertSettings.webhookUrl && typeof location !== 'undefined') {
+          state.alertSettings.webhookUrl = location.origin + '/alert';
+        }
         save();
         startCgmTimer();
         toast(state.cgm.mode === 'off' ? 'CGM off' : 'CGM settings saved');
@@ -1187,12 +1212,15 @@
     }
     const testCgm = document.getElementById('btnTestCgm');
     if (testCgm) testCgm.addEventListener('click', () => {
-      state.cgm.mode = document.getElementById('cgmMode').value;
+      state.cgm.mode = document.getElementById('cgmMode').value || 'dexcom_share';
       state.cgm.accountName = document.getElementById('cgmAccount').value.trim();
       state.cgm.password = document.getElementById('cgmPassword').value;
       state.cgm.region = document.getElementById('cgmRegion').value;
       state.cgm.nightscoutUrl = document.getElementById('cgmNightscout').value.trim();
       state.cgm.nightscoutSecret = document.getElementById('cgmNsSecret').value;
+      if (!state.alertSettings.webhookUrl && typeof location !== 'undefined') {
+        state.alertSettings.webhookUrl = location.origin + '/alert';
+      }
       save();
       refreshCgm(true);
     });
