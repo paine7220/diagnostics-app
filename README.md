@@ -2,6 +2,8 @@
 
 Offline diagnostic assistant for Michael Paine. One canonical web app, two platform wrappers.
 
+> **Kathy Health (iPhone)** lives in [`kathy-health/`](./kathy-health/). Separate product: medications, feel logs, vitals, and care appointments — on-device, Capacitor-ready for Xcode.
+
 ```
 web/          canonical app (edit this)
 windows/      Electron + electron-builder wrapper

@@ -1,0 +1,11 @@
+{
+  "name": "kathy-health",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Kathy Health — personal iPhone health companion (meds, symptoms, vitals, care)",
+  "scripts": {
+    "test": "node tests/run-checks.js",
+    "sync": "bash sync-web.sh",
+    "build": "node -e \"console.log('Static web/ app; no compile step.')\""
+  }
+}
