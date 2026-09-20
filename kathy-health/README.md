@@ -1,25 +1,19 @@
 # Kathy’s Health
 
-Personal health companion for Kathy — built for iPhone (Add to Home Screen / Capacitor).
+Personal health companion for Kathy — iPhone (Safari Add to Home Screen).
 
-## Family low-sugar alerts (online)
+## Dexcom / CGM
 
-When blood sugar is logged at or below her threshold and she does **not** tap **I’m OK** in time:
+**Settings → Dexcom / CGM**:
 
-1. The app POSTs an alert to your **webhook** (hands-free — no Send tap on her phone)
-2. Deploy `kathy-health/alert-worker` with Twilio secrets to text family automatically  
-   **or** point Settings at an IFTTT / Zapier / Twilio webhook
-3. **I need help now** also opens SMS compose as a backup when she can still tap
+- **Dexcom Share** — Kathy’s Share username/password (Share must be on; add a follower). Needs the alert worker base URL (same host as the family alert webhook).
+- **Nightscout** — Nightscout site URL (+ optional API secret)
 
-Meds, symptoms, and care notes still store on the device.
+While the app is open it polls CGM. A low reading starts the family check-in automatically.
 
-## Setup on iPhone
+## Family alerts
 
-1. Open `kathy-health/web/` in Safari → **Add to Home Screen**
-2. **Settings → Family to alert** → add phone numbers
-3. Deploy the alert worker (see `kathy-health/alert-worker/README.md`) and paste `…/alert` into **Alert webhook**
-4. Tap **Send test alert**
-5. Allow notifications when prompted
+If she does not tap **I’m OK** in time, the app POSTs to your webhook so family can be texted without her tapping Send. See `alert-worker/`.
 
 ## Checks
 
