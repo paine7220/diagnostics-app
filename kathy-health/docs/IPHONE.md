@@ -1,10 +1,16 @@
 # Kathy’s Health on iPhone
 
-## Fastest (Safari)
+## Tap-ready (Safari)
 
-1. Open `kathy-health/web/` in Safari on the iPhone (hosted URL or Mac file share).
-2. Tap **Share → Add to Home Screen**.
-3. Open **Kathy’s Health** from the home screen (standalone, offline-capable after first load).
+Open this link on the iPhone in **Safari**:
+
+**https://guitars-nothing-saskatchewan-yang.trycloudflare.com/**
+
+1. Tap **Share** → **Add to Home Screen** → **Add**
+2. Open **Kathy’s Health** from the home screen
+3. **Settings** → add family phone numbers + alert webhook for low-sugar texts
+
+This link stays up while the cloud agent is running. For a permanent URL after merge, host `kathy-health/web/` on Cloudflare or GitHub Pages (or use `/kathy/` on the main Workers site once published).
 
 ## Optional App Store / Xcode shell
 
@@ -17,7 +23,5 @@ npm run sync
 npx cap add ios   # first time only
 npm run open
 ```
-
-In Xcode: set your team under Signing, then Archive.
 
 Bundle ID placeholder: `com.michaelpaine.kathyhealth`.
