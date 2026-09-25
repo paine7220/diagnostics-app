@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'kathy_health_v1';
-  const VERSION = '1.5.2';
+  const VERSION = '1.5.3';
 
   const defaultState = () => ({
     version: VERSION,
@@ -137,7 +137,13 @@
         dispatchFamilyAlert('timeout');
         return;
       }
-      render();
+      const countdown = document.getElementById('alertCountdown');
+      if (countdown) {
+        const secs = Math.max(0, Math.ceil((state.activeAlert.deadlineAt - Date.now()) / 1000));
+        countdown.textContent = String(secs);
+      } else if (!document.getElementById('quickCgmAccount')) {
+        render();
+      }
     }, 1000);
   }
 
@@ -185,6 +191,23 @@
 
   async function refreshCgm(manual) {
     if (!state.cgm || state.cgm.mode === 'off') return;
+    if (state.cgm.mode === 'dexcom_share' && !(state.cgm.accountName && state.cgm.password)) {
+      if (manual) {
+        state.cgm.lastError = 'Enter Dexcom username and password';
+        save();
+        showConnectStatus(state.cgm.lastError, true);
+        toast(state.cgm.lastError);
+      }
+      return;
+    }
+    if (state.cgm.mode === 'nightscout' && !state.cgm.nightscoutUrl) {
+      if (manual) {
+        state.cgm.lastError = 'Nightscout URL required';
+        save();
+        toast(state.cgm.lastError);
+      }
+      return;
+    }
     try {
       const reading = await KathyDexcom.fetchLatest({
         mode: state.cgm.mode,
@@ -218,13 +241,68 @@
     } catch (err) {
       state.cgm.lastError = String(err && err.message || err);
       state.cgm.lastFetchAt = new Date().toISOString();
-      // Keep the connect form usable: clear a stale "success" reading only on hard auth failures
-      if (/login rejected|username|password|Share/i.test(state.cgm.lastError)) {
+      if (/login rejected|AccountPassword|Invalid/i.test(state.cgm.lastError)) {
         state.cgm.lastReading = null;
       }
       save();
       if (manual) toast(state.cgm.lastError);
-      render();
+      // Avoid full re-render while the connect form is on screen — keeps typing intact
+      if (!state.cgm.lastReading && document.getElementById('quickCgmAccount')) {
+        showConnectStatus(state.cgm.lastError, true);
+        const btn = document.getElementById('btnQuickConnectCgm');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Connect Dexcom';
+        }
+      } else {
+        render();
+      }
+    }
+  }
+
+  function showConnectStatus(message, isError) {
+    const statusEl = document.getElementById('quickCgmStatus');
+    if (!statusEl) return;
+    statusEl.hidden = !message;
+    statusEl.className = 'connect-status' + (isError ? ' is-error' : ' is-pending');
+    statusEl.textContent = message || '';
+  }
+
+  async function connectDexcomFromForm() {
+    const account = ((document.getElementById('quickCgmAccount') || {}).value || '').trim();
+    const password = String((document.getElementById('quickCgmPassword') || {}).value || '');
+    const region = (document.getElementById('quickCgmRegion') || {}).value || 'us';
+    const btn = document.getElementById('btnQuickConnectCgm');
+    state.cgm.mode = 'dexcom_share';
+    state.cgm.accountName = account;
+    state.cgm.password = password;
+    state.cgm.region = region === 'ous' ? 'ous' : 'us';
+    state.cgm.lastError = '';
+    if (!state.alertSettings.webhookUrl && typeof location !== 'undefined') {
+      state.alertSettings.webhookUrl = location.origin + '/alert';
+    }
+    if (!account || !password) {
+      state.cgm.lastError = 'Enter Dexcom username and password';
+      save();
+      showConnectStatus(state.cgm.lastError, true);
+      toast(state.cgm.lastError);
+      return;
+    }
+    save();
+    startCgmTimer();
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Connecting…';
+    }
+    showConnectStatus('Talking to Dexcom Share… keep this page open.', false);
+    toast('Connecting Dexcom…');
+    await refreshCgm(true);
+    if (!state.cgm.lastReading) {
+      const again = document.getElementById('btnQuickConnectCgm');
+      if (again) {
+        again.disabled = false;
+        again.textContent = 'Connect Dexcom';
+      }
     }
   }
 
@@ -374,7 +452,7 @@
           <h2>Blood sugar ${esc(state.activeAlert.sugarValue)} ${esc(state.activeAlert.unit || '')}</h2>
           ${waiting ? `
             <p class="lede">If you do not confirm you are OK, family is alerted automatically (no tap required).${state.activeAlert.pumpSuspended ? ' Pump reports suspended.' : ''}</p>
-            <p class="alert-countdown">${left}s</p>
+            <p class="alert-countdown" id="alertCountdown">${left}s</p>
             <div class="item-actions" style="flex-direction:column">
               <button type="button" class="ok" id="btnImOk">I’m OK — cancel alert</button>
               <button type="button" class="warn" id="btnNeedHelp">I need help now</button>
@@ -1211,6 +1289,7 @@
     }
     const refreshCgmBtn = document.getElementById('btnRefreshCgm');
     if (refreshCgmBtn) refreshCgmBtn.addEventListener('click', () => refreshCgm(true));
+    // Connect Dexcom is handled via main click delegation so re-renders cannot drop the listener
     const disconnectCgm = document.getElementById('btnDisconnectCgm');
     if (disconnectCgm) {
       disconnectCgm.addEventListener('click', () => {
@@ -1218,51 +1297,6 @@
         state.cgm.lastError = '';
         save();
         render();
-      });
-    }
-    const quickConnect = document.getElementById('btnQuickConnectCgm');
-    if (quickConnect) {
-      quickConnect.addEventListener('click', async () => {
-        const account = (document.getElementById('quickCgmAccount') || {}).value || '';
-        const password = (document.getElementById('quickCgmPassword') || {}).value || '';
-        const region = (document.getElementById('quickCgmRegion') || {}).value || 'us';
-        const statusEl = document.getElementById('quickCgmStatus');
-        state.cgm.mode = 'dexcom_share';
-        state.cgm.accountName = String(account).trim();
-        state.cgm.password = String(password);
-        state.cgm.region = region === 'ous' ? 'ous' : 'us';
-        state.cgm.lastError = '';
-        if (!state.alertSettings.webhookUrl && typeof location !== 'undefined') {
-          state.alertSettings.webhookUrl = location.origin + '/alert';
-        }
-        if (!state.cgm.accountName || !state.cgm.password) {
-          if (statusEl) {
-            statusEl.hidden = false;
-            statusEl.className = 'connect-status is-error';
-            statusEl.textContent = 'Enter Dexcom username and password';
-          }
-          toast('Enter Dexcom username and password');
-          return;
-        }
-        save();
-        startCgmTimer();
-        quickConnect.disabled = true;
-        quickConnect.textContent = 'Connecting…';
-        if (statusEl) {
-          statusEl.hidden = false;
-          statusEl.className = 'connect-status is-pending';
-          statusEl.textContent = 'Talking to Dexcom Share… keep this page open.';
-        }
-        toast('Connecting Dexcom…');
-        await refreshCgm(true);
-        // refreshCgm re-renders; if it failed, form stays with durable error
-        if (!state.cgm.lastReading) {
-          const btn = document.getElementById('btnQuickConnectCgm');
-          if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Connect Dexcom';
-          }
-        }
       });
     }
     const refreshPumpBtn = document.getElementById('btnRefreshPump');
@@ -1782,6 +1816,24 @@
     render();
   });
 
+  // Stable Connect Dexcom handler (survives main.innerHTML re-renders)
+  document.getElementById('main').addEventListener('click', (e) => {
+    const connect = e.target.closest('#btnQuickConnectCgm');
+    if (connect) {
+      e.preventDefault();
+      connectDexcomFromForm();
+      return;
+    }
+    const disconnect = e.target.closest('#btnDisconnectCgm');
+    if (disconnect) {
+      e.preventDefault();
+      state.cgm.lastReading = null;
+      state.cgm.lastError = '';
+      save();
+      render();
+    }
+  });
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
@@ -1795,7 +1847,10 @@
   }
 
   startCgmTimer();
-  if (state.onboarded && state.cgm && state.cgm.mode !== 'off') {
+  if (state.onboarded && state.cgm && state.cgm.mode === 'nightscout' && state.cgm.nightscoutUrl) {
+    refreshCgm(false);
+  }
+  if (state.onboarded && state.cgm && state.cgm.mode === 'dexcom_share' && state.cgm.accountName && state.cgm.password) {
     refreshCgm(false);
   }
   if (state.onboarded && state.pump && state.pump.mode === 'nightscout') {

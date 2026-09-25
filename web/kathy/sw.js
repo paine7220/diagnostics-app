@@ -1,4 +1,4 @@
-const CACHE = 'kathy-health-v10';
+const CACHE = 'kathy-health-v11';
 const ASSETS = [
   './',
   './index.html',
@@ -28,6 +28,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  const isCode = /\.(js|css|webmanifest|html)$/i.test(url.pathname) || url.pathname.endsWith('/');
+  // Network-first for app code so phone tests pick up fixes without fighting cache
+  if (isCode) {
+    event.respondWith(
+      fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((cache) => cache.put(req, copy));
+        return res;
+      }).catch(() => caches.match(req).then((cached) => cached || caches.match('./index.html')))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(req).then((cached) => cached || fetch(req).then((res) => {
       const copy = res.clone();

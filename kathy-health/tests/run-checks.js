@@ -114,10 +114,13 @@ assert.ok(appSrc.includes('dexcom_share'), 'dexcom share mode');
 assert.ok(appSrc.includes('refreshPump'), 'pump refresh');
 assert.ok(appSrc.includes('Insulin pump'), 'pump UI');
 assert.ok(appSrc.includes('renderBills'), 'bills UI');
+assert.ok(appSrc.includes('connectDexcomFromForm'), 'delegated dexcom connect');
+assert.ok(appSrc.includes('showConnectStatus'), 'in-place connect status');
 assert.ok(appSrc.includes('btnQuickConnectCgm'), 'quick dexcom connect');
 assert.ok(appSrc.includes('connect-status'), 'durable dexcom status');
 assert.ok(appSrc.includes('btnDisconnectCgm'), 'change dexcom account');
 assert.ok(css.includes('tap-lg'), 'large tap targets');
 assert.ok(css.includes('connect-status'), 'connect status styles');
+assert.ok(fs.readFileSync(path.join(web, 'sw.js'), 'utf8').includes('Network-first'), 'network-first sw');
 
 console.log('kathy-health checks passed');
