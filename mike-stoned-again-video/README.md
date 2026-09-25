@@ -1,6 +1,8 @@
-# Mike Paine — Stoned Again 2 (official video project)
+# Mike Paine — Stoned Again 2
 
-New project recovered from the ChatGPT share that hit a usage limit mid-handoff:
+**New project** (standalone — not Kathy health, not the vehicle diagnostics app).
+
+Recovered from the ChatGPT share that hit a usage limit mid-handoff:
 
 https://chatgpt.com/share/6ab6d018-951c-83ea-9c6f-64e395165ead
 
