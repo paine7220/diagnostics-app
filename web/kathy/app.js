@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'kathy_health_v1';
-  const VERSION = '1.5.1';
+  const VERSION = '1.5.2';
 
   const defaultState = () => ({
     version: VERSION,
@@ -218,9 +218,13 @@
     } catch (err) {
       state.cgm.lastError = String(err && err.message || err);
       state.cgm.lastFetchAt = new Date().toISOString();
+      // Keep the connect form usable: clear a stale "success" reading only on hard auth failures
+      if (/login rejected|username|password|Share/i.test(state.cgm.lastError)) {
+        state.cgm.lastReading = null;
+      }
       save();
       if (manual) toast(state.cgm.lastError);
-      else render();
+      render();
     }
   }
 
@@ -484,17 +488,17 @@
 
       <section class="section sugar-panel">
         <div class="section-head"><h3>Blood sugar</h3></div>
-        ${!(state.cgm && state.cgm.accountName && state.cgm.password) ? `
-          <article class="item">
+        ${!(state.cgm && state.cgm.lastReading) ? `
+          <article class="item dexcom-connect">
             <p class="item-title">Connect Dexcom now</p>
-            <p class="item-meta">Share must be On in the Dexcom app. Enter the same Dexcom account used on this iPhone, then tap Connect.</p>
+            <p class="item-meta">1) Open Dexcom → Share On. 2) Enter the same Dexcom username/password used on this iPhone. 3) Tap Connect.</p>
             <div class="field">
               <label for="quickCgmAccount">Dexcom username</label>
-              <input id="quickCgmAccount" value="${esc(state.cgm.accountName || '')}" autocomplete="username" autocapitalize="none" spellcheck="false">
+              <input id="quickCgmAccount" value="${esc(state.cgm.accountName || '')}" autocomplete="username" autocapitalize="none" spellcheck="false" enterkeyhint="next">
             </div>
             <div class="field">
               <label for="quickCgmPassword">Dexcom password</label>
-              <input id="quickCgmPassword" type="password" value="${esc(state.cgm.password || '')}" autocomplete="current-password">
+              <input id="quickCgmPassword" type="password" value="${esc(state.cgm.password || '')}" autocomplete="current-password" enterkeyhint="go">
             </div>
             <div class="field">
               <label for="quickCgmRegion">Region</label>
@@ -503,29 +507,31 @@
                 <option value="ous" ${state.cgm.region === 'ous' ? 'selected' : ''}>Outside US</option>
               </select>
             </div>
-            <div class="item-actions">
-              <button type="button" id="btnQuickConnectCgm">Connect Dexcom</button>
-              <a class="button secondary" href="dexcom://">Open Dexcom app</a>
+            <div class="item-actions stack-actions">
+              <button type="button" class="ok tap-lg" id="btnQuickConnectCgm">Connect Dexcom</button>
+              <a class="button secondary tap-lg" href="dexcom://">Open Dexcom app</a>
             </div>
-            ${state.cgm.lastError ? '<p class="item-meta"><span class="badge warn">' + esc(state.cgm.lastError) + '</span></p>' : ''}
-          </article>` : ''}
-        <p class="item-meta">Low alert at ${esc(String(state.alertSettings.lowSugarThreshold))} ${esc(state.alertSettings.unit || 'mg/dL')}. If there is no OK within ${esc(String(state.alertSettings.responseSeconds))} seconds, family is alerted automatically.</p>
-        ${state.cgm && state.cgm.accountName && state.cgm.password ? `
-          <article class="item" style="margin-top:10px">
+            <p class="connect-status ${state.cgm.lastError ? 'is-error' : ''}" id="quickCgmStatus" ${state.cgm.lastError ? '' : 'hidden'}>
+              ${state.cgm.lastError ? esc(state.cgm.lastError) : ''}
+            </p>
+          </article>` : `
+          <article class="item" style="margin-top:4px">
             <p class="item-title">
-              ${state.cgm.lastReading
-                ? esc(String(state.cgm.lastReading.mgdl)) + ' mg/dL ' + esc(state.cgm.lastReading.trend || '')
-                : 'Waiting for Dexcom…'}
+              ${esc(String(state.cgm.lastReading.mgdl))} mg/dL ${esc(state.cgm.lastReading.trend || '')}
             </p>
             <p class="item-meta">
               Source: ${esc(state.cgm.mode === 'dexcom_share' ? 'Dexcom Share' : 'Nightscout')}
-              ${state.cgm.lastReading && state.cgm.lastReading.at ? ' · ' + esc(new Date(state.cgm.lastReading.at).toLocaleTimeString()) : ''}
+              ${state.cgm.lastReading.at ? ' · ' + esc(new Date(state.cgm.lastReading.at).toLocaleTimeString()) : ''}
               ${state.cgm.lastError ? '<br><span class="badge warn">' + esc(state.cgm.lastError) + '</span>' : ''}
             </p>
-          </article>` : ''}
+            <div class="item-actions" style="margin-top:8px">
+              <button type="button" class="secondary" id="btnDisconnectCgm">Change Dexcom account</button>
+            </div>
+          </article>`}
+        <p class="item-meta">Low alert at ${esc(String(state.alertSettings.lowSugarThreshold))} ${esc(state.alertSettings.unit || 'mg/dL')}. If there is no OK within ${esc(String(state.alertSettings.responseSeconds))} seconds, family is alerted automatically.</p>
         <div class="item-actions" style="margin-top:10px">
           <button type="button" data-open="sugar">Log sugar</button>
-          ${state.cgm && state.cgm.accountName && state.cgm.password ? '<button type="button" class="secondary" id="btnRefreshCgm">Refresh CGM</button>' : ''}
+          ${state.cgm && state.cgm.lastReading ? '<button type="button" class="secondary" id="btnRefreshCgm">Refresh CGM</button>' : ''}
           <button type="button" class="warn" id="btnHelpNow">I need help</button>
         </div>
         <p class="item-meta" style="margin-top:10px">
@@ -1205,12 +1211,22 @@
     }
     const refreshCgmBtn = document.getElementById('btnRefreshCgm');
     if (refreshCgmBtn) refreshCgmBtn.addEventListener('click', () => refreshCgm(true));
+    const disconnectCgm = document.getElementById('btnDisconnectCgm');
+    if (disconnectCgm) {
+      disconnectCgm.addEventListener('click', () => {
+        state.cgm.lastReading = null;
+        state.cgm.lastError = '';
+        save();
+        render();
+      });
+    }
     const quickConnect = document.getElementById('btnQuickConnectCgm');
     if (quickConnect) {
-      quickConnect.addEventListener('click', () => {
+      quickConnect.addEventListener('click', async () => {
         const account = (document.getElementById('quickCgmAccount') || {}).value || '';
         const password = (document.getElementById('quickCgmPassword') || {}).value || '';
         const region = (document.getElementById('quickCgmRegion') || {}).value || 'us';
+        const statusEl = document.getElementById('quickCgmStatus');
         state.cgm.mode = 'dexcom_share';
         state.cgm.accountName = String(account).trim();
         state.cgm.password = String(password);
@@ -1220,13 +1236,33 @@
           state.alertSettings.webhookUrl = location.origin + '/alert';
         }
         if (!state.cgm.accountName || !state.cgm.password) {
+          if (statusEl) {
+            statusEl.hidden = false;
+            statusEl.className = 'connect-status is-error';
+            statusEl.textContent = 'Enter Dexcom username and password';
+          }
           toast('Enter Dexcom username and password');
           return;
         }
         save();
         startCgmTimer();
+        quickConnect.disabled = true;
+        quickConnect.textContent = 'Connecting…';
+        if (statusEl) {
+          statusEl.hidden = false;
+          statusEl.className = 'connect-status is-pending';
+          statusEl.textContent = 'Talking to Dexcom Share… keep this page open.';
+        }
         toast('Connecting Dexcom…');
-        refreshCgm(true);
+        await refreshCgm(true);
+        // refreshCgm re-renders; if it failed, form stays with durable error
+        if (!state.cgm.lastReading) {
+          const btn = document.getElementById('btnQuickConnectCgm');
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Connect Dexcom';
+          }
+        }
       });
     }
     const refreshPumpBtn = document.getElementById('btnRefreshPump');

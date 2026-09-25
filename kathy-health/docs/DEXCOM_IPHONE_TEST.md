@@ -1,17 +1,10 @@
-# Connect Dexcom on Michael’s iPhone (test)
+# Dexcom on iPhone (Kathy’s Health)
 
-Tap-ready app URL (Safari):
+1. Open the live HTTPS link in **Safari** (not Chrome).
+2. Share → **Add to Home Screen**.
+3. In the **Dexcom** app: turn **Share On** (followers optional — Share itself must be enabled).
+4. Open Kathy’s Health → **Today**.
+5. Enter the same Dexcom username/password → tap **Connect Dexcom**.
+6. A live mg/dL reading appears. Errors stay on the form until fixed.
 
-**https://fallen-memorial-liable-armor.trycloudflare.com/**
-
-## Steps
-
-1. On Michael’s iPhone, open **Safari** → that link → **Share → Add to Home Screen**.
-2. Open the **Dexcom** app → **Share** → turn **Sharing On** (add a follower if prompted; inviting yourself is fine).
-3. Open **Kathy’s Health** → **Today**:
-   - Dexcom username / password (same account as the Dexcom app)
-   - Region: United States (or Outside US)
-   - Tap **Connect Dexcom**
-4. Live glucose should appear. Lows start the family check-in.
-
-The phone-test server proxies Dexcom Share on the same URL (`/dexcom/latest`), so no separate worker is required for this test.
+The phone-test server proxies Dexcom Share at `POST /dexcom/latest` on the same origin.

@@ -1,4 +1,4 @@
-const CACHE = 'kathy-health-v9';
+const CACHE = 'kathy-health-v10';
 const ASSETS = [
   './',
   './index.html',

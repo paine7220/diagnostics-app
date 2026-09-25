@@ -1,29 +1,12 @@
-# Kathy’s Health on iPhone
+# Install Kathy’s Health on iPhone
 
-## Tap-ready (Safari)
+1. Open the HTTPS link in **Safari**.
+2. Tap the Share button → **Add to Home Screen**.
+3. Open the home-screen icon (standalone PWA).
 
-**https://fallen-memorial-liable-armor.trycloudflare.com/**
+## First-run tips
 
-1. Tap **Share** → **Add to Home Screen** → **Add**
-2. Connect Dexcom (below)
-3. Add family phones in Settings for low-sugar alerts
-
-## Connect Dexcom app on this iPhone
-
-1. Open **Dexcom** → **Share** → Sharing **On**
-2. On **Today**, enter the same Dexcom username/password → **Connect Dexcom**
-3. Live sugar should appear; lows start the family check-in
-
-Full checklist: `DEXCOM_IPHONE_TEST.md`
-
-## Optional App Store / Xcode shell
-
-```bash
-cd kathy-health/ios
-npm install
-npm run sync
-npx cap add ios   # first time only
-npm run open
-```
-
-Bundle ID placeholder: `com.michaelpaine.kathyhealth`.
+- **Today** has one-tap **Connect Dexcom** (Share must be On in the Dexcom app).
+- Add family phones + alert webhook in **Settings** for low-sugar SMS.
+- **Bills** works offline; optional OpenAI key for richer help.
+- Data stays on this phone (export backup from Settings).

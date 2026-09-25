@@ -114,6 +114,10 @@ assert.ok(appSrc.includes('dexcom_share'), 'dexcom share mode');
 assert.ok(appSrc.includes('refreshPump'), 'pump refresh');
 assert.ok(appSrc.includes('Insulin pump'), 'pump UI');
 assert.ok(appSrc.includes('renderBills'), 'bills UI');
-assert.ok(appSrc.includes('KathyBilling'), 'billing helper');
+assert.ok(appSrc.includes('btnQuickConnectCgm'), 'quick dexcom connect');
+assert.ok(appSrc.includes('connect-status'), 'durable dexcom status');
+assert.ok(appSrc.includes('btnDisconnectCgm'), 'change dexcom account');
+assert.ok(css.includes('tap-lg'), 'large tap targets');
+assert.ok(css.includes('connect-status'), 'connect status styles');
 
 console.log('kathy-health checks passed');
